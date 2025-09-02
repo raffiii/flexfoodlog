@@ -6,8 +6,43 @@ import Html exposing (..)
 import Html.Attributes exposing (class, type_)
 import Html.Events
 import Json.Decode as D
+import Meal
 import Random
 import SearchableDropdown
+
+
+
+-- TYPES
+
+
+type Msg
+    = NoOp
+    | SearchableDropdownMsg SearchableDropdown.Msg
+    | EventMsg (Events.Msg )
+    | SaveMeal
+    | MealMsg Meal.Msg
+    --| DataMsg DbMsg
+
+-- type DbMsg
+--     = MealTransform Meal.DbMsg
+
+
+type alias FoodForm =
+    { datetime : String
+    , dropdown : SearchableDropdown.Model
+    }
+
+
+type alias Model =
+    { foodForm : FoodForm
+    , eventState : Events.State
+    , mealModal : Meal.Modal
+    }
+
+type Event
+    = MealEvent Meal.Event
+
+-- MAIN
 
 
 main : Program D.Value Model Msg
@@ -18,6 +53,10 @@ main =
         , view = view
         , subscriptions = \_ -> Sub.none
         }
+
+
+
+-- INIT, UPDATE, VIEW
 
 
 init : D.Value -> ( Model, Cmd Msg )
@@ -38,17 +77,11 @@ init flags =
         model =
             { foodForm = foodForm
             , eventState = eventState
+            , mealModal = Meal.initModal
             }
 
-        sampleEvent =
-            Events.buildEnvelope
-                "test:0"
-                (Events.TitleChanged "App started")
-                "SampleStartup:0"
-                "SampleStartup:0"
-                eventState
     in
-    ( model, sampleEvent |> Cmd.map EventMsg )
+    ( model, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -62,54 +95,33 @@ update msg model =
                 foodForm =
                     model.foodForm
 
-                updatedDropdown =
-                    SearchableDropdown.update subMsg foodForm.dropdown
+                ( updatedDropdown, cmd ) =
+                    SearchableDropdown.update (\_ _ -> Cmd.none) subMsg foodForm.dropdown
             in
-            ( { model | foodForm = { foodForm | dropdown = updatedDropdown } }, Cmd.none )
+            ( { model | foodForm = { foodForm | dropdown = updatedDropdown } }, cmd )
 
         EventMsg subMsg ->
             let
                 ( updatedEventState, cmd ) =
-                    Events.update subMsg model.eventState
+                    Events.update (Debug.log "Event update" subMsg) model.eventState
             in
             ( { model | eventState = updatedEventState }, Cmd.map EventMsg cmd )
 
         SaveMeal ->
-            ( model, Cmd.map EventMsg <| saveMeal model )
+            ( model, Cmd.none )
 
-
-saveMeal : Model -> Cmd (Events.Msg ())
-saveMeal model =
-    Events.buildEnvelope
-        "meal:0"
-        (Events.ItemAdded "Sample Meal")
-        "SaveMeal:0"
-        "SaveMeal:0"
-        model.eventState
-
-
-type Msg
-    = NoOp
-    | SearchableDropdownMsg SearchableDropdown.Msg
-    | EventMsg (Events.Msg ())
-    | SaveMeal
-
-
-type alias FoodForm =
-    { datetime : String
-    , dropdown : SearchableDropdown.Model
-    }
-
-
-type alias Model =
-    { foodForm : FoodForm
-    , eventState : Events.State
-    }
-
-
-title : Html msg
-title =
-    h1 [] [ text "FlexFoodLog" ]
+        MealMsg subMsg ->
+            let
+                ( updatedMealModal, cmd ) =
+                    Meal.updateMeal
+                        (\se ->
+                            Cmd.map EventMsg <| Events.buildEnvelope se model.eventState
+                        )
+                        (Cmd.map MealMsg)
+                        subMsg
+                        model.mealModal
+            in
+            ( { model | mealModal = updatedMealModal }, cmd )
 
 
 view : Model -> Html Msg
@@ -117,7 +129,19 @@ view model =
     main_ [ class "container-fluid" ]
         [ title
         , newMeal model.foodForm
+        , Meal.viewMealModal model.mealModal |> Html.map MealMsg
         ]
+
+
+
+-- HELPERS
+
+
+
+
+title : Html msg
+title =
+    h1 [] [ text "FlexFoodLog" ]
 
 
 newMeal : FoodForm -> Html Msg

@@ -1,5 +1,6 @@
-module Events exposing (Envelope, Event(..), Msg, State, buildEnvelope, update)
+module Events exposing (Envelope, Msg, SmallEnvelope, State, buildEnvelope, update)
 
+import Html.Attributes exposing (type_)
 import Json.Encode as E
 import Ports
 import Random exposing (Seed, step)
@@ -19,23 +20,15 @@ type alias State =
 
 
 
--- A domain event (define more as needed)
+-- ev domain event (define more as needed)
 
 
-type Event a
-    = TitleChanged String
-    | ItemAdded String
-    | Modification (a -> ( String, E.Value )) a
-    | Undo
-    | Redo
-
-
-type Msg a
+type Msg
     = NoOp
-    | BuiltEnvelope ( State, Envelope a )
+    | BuiltEnvelope ( State, Envelope )
 
 
-update : Msg a -> State -> ( State, Cmd msg )
+update : Msg -> State -> ( State, Cmd msg )
 update msg state =
     case msg of
         NoOp ->
@@ -49,53 +42,56 @@ update msg state =
 -- Envelope: metadata + event
 
 
-type alias Envelope a =
+type alias Envelope =
     { eventId : String -- ULID/UUID generated in Elm
     , streamId : String -- e.g. "todo:42"
     , timestamp : Posix
     , schemaVersion : Int
-    , event : Event a
+    , type_ : String
+    , payload : E.Value
     , correlationId : String
     , causationId : String
     }
 
 
-encodeEvent : Event a -> ( String, E.Value )
-encodeEvent ev =
-    case ev of
-        TitleChanged title ->
-            ( "TitleChanged"
-            , E.object [ ( "title", E.string title ) ]
-            )
-
-        ItemAdded name ->
-            ( "ItemAdded"
-            , E.object [ ( "name", E.string name ) ]
-            )
-
-        Modification f a ->
-            f a
-
-        Undo ->
-            ( "Undo", E.null )
-
-        Redo ->
-            ( "Redo", E.null )
+type alias SmallEnvelope =
+    { streamId : String
+    , type_ : String
+    , payload : E.Value
+    , correlationId : String
+    , causationId : String
+    }
 
 
-encodeEnvelope : Envelope  a -> E.Value
+
+-- encodeEvent : Event ev -> ( String, E.Value )
+-- encodeEvent ev =
+--     case ev of
+--         TitleChanged title ->
+--             ( "TitleChanged"
+--             , E.object [ ( "title", E.string title ) ]
+--             )
+--         ItemAdded name ->
+--             ( "ItemAdded"
+--             , E.object [ ( "name", E.string name ) ]
+--             )
+--         Modification f ev ->
+--             f a
+--         Undo ->
+--             ( "Undo", E.null )
+--         Redo ->
+--             ( "Redo", E.null )
+
+
+encodeEnvelope : Envelope -> E.Value
 encodeEnvelope env =
-    let
-        ( eventType, payload ) =
-            encodeEvent env.event
-    in
     E.object
         [ ( "eventId", E.string env.eventId )
         , ( "streamId", E.string env.streamId )
         , ( "timestamp", E.string (String.fromInt (Time.posixToMillis env.timestamp)) )
         , ( "schemaVersion", E.int env.schemaVersion )
-        , ( "type", E.string eventType )
-        , ( "payload", payload )
+        , ( "type", E.string env.type_ )
+        , ( "payload", env.payload )
         , ( "meta"
           , E.object
                 [ ( "correlationId", E.string env.correlationId )
@@ -105,8 +101,8 @@ encodeEnvelope env =
         ]
 
 
-buildEnvelope : String -> Event a -> String -> String -> State -> Cmd (Msg a)
-buildEnvelope streamId event correlationId causationId state =
+buildEnvelope : SmallEnvelope -> State -> Cmd Msg
+buildEnvelope env state =
     Time.now
         |> Task.perform
             (\now ->
@@ -117,14 +113,15 @@ buildEnvelope streamId event correlationId causationId state =
                     eventId =
                         Ulid.toString ulid
                 in
-                ( { seed = newSeed }
+                ( { state | seed = newSeed }
                 , { eventId = eventId
-                  , streamId = streamId
+                  , streamId = env.streamId
                   , timestamp = now
                   , schemaVersion = schemaVersion
-                  , event = event
-                  , correlationId = correlationId
-                  , causationId = causationId
+                  , type_ = env.type_
+                  , payload = env.payload
+                  , correlationId = env.correlationId
+                  , causationId = env.causationId
                   }
                 )
                     |> BuiltEnvelope
