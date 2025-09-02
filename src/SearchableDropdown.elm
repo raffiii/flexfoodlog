@@ -40,8 +40,8 @@ type Msg
     | NoOp
 
 
-update : Msg -> Model -> Model
-update msg model =
+update : (List String -> List String -> Cmd m) -> Msg -> Model -> ( Model, Cmd m )
+update onUpdate msg model =
     let
         toggleItem item =
             if List.member item model.selectedItems then
@@ -49,39 +49,42 @@ update msg model =
 
             else
                 item :: model.selectedItems
-    in
-    case msg of
-        ToggleDropdown ->
-            { model | isOpen = not model.isOpen }
 
-        SearchChanged term ->
-            { model | searchTerm = term, isOpen = True }
-
-        ToggleItem item ->
+        toggleUpdate item =
             let
                 updatedSelected =
                     toggleItem item
             in
-            { model | selectedItems = updatedSelected, searchTerm = "" }
+            ( { model | selectedItems = updatedSelected, searchTerm = "" }, onUpdate (Debug.log "previous items" model.selectedItems) (Debug.log "new items" updatedSelected) )
+    in
+    case msg of
+        ToggleDropdown ->
+            ( { model | isOpen = not model.isOpen }, Cmd.none )
+
+        SearchChanged term ->
+            ( { model | searchTerm = term, isOpen = True }, Cmd.none )
+
+        ToggleItem item ->
+            toggleUpdate item
 
         KeyDown kc term ->
             case kc of
                 13 ->
                     -- KeyCode Enter
-                    let
-                        updatedSelected =
-                            toggleItem term
-                    in
-                    { model | selectedItems = updatedSelected, searchTerm = "" }
+                    toggleUpdate <| Debug.log "Enter on: " term
+
+                27 ->
+                    -- KeyCode Escape
+                    ( { model | isOpen = False }, Cmd.none )
 
                 _ ->
-                    model
+                    ( model, Cmd.none )
 
         CloseDropdown ->
-            { model | isOpen = False }
+            ( { model | isOpen = False }, Cmd.none )
 
         NoOp ->
-            model
+            ( model, Cmd.none )
 
 
 
