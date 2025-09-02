@@ -1,6 +1,6 @@
 module Meal exposing (..)
 
-import Events 
+import Events
 import Html exposing (..)
 import Html.Attributes as Attr
 import Html.Events exposing (..)
@@ -137,8 +137,59 @@ toEnvelope ev modal =
                     corrId
                     causeId
 
-        _ ->
-            Nothing
+        IngredientRemoved corrId causeId ingredient ->
+            Just <|
+                Events.SmallEnvelope
+                    modal.meal.streamId
+                    "IngredientRemoved"
+                    (E.object
+                        [ ( "ingredient", E.string ingredient )
+                        ]
+                    )
+                    corrId
+                    causeId
+
+        MealCreated corrId causeId meal ->
+            Just <|
+                Events.SmallEnvelope
+                    modal.meal.streamId
+                    "MealCreated"
+                    (E.object [])
+                    corrId
+                    causeId
+
+        NotesUpdated corrId causeId notes ->
+            Just <|
+                Events.SmallEnvelope
+                    modal.meal.streamId
+                    "NotesUpdated"
+                    (case notes of
+                        Just n ->
+                            E.object [ ( "notes", E.string n ) ]
+
+                        Nothing ->
+                            E.object [ ( "notes", E.null ) ]
+                    )
+                    corrId
+                    causeId
+
+        DateTimeUpdated corrId causeId datetime ->
+            Just <|
+                Events.SmallEnvelope
+                    modal.meal.streamId
+                    "DateTimeUpdated"
+                    (E.object [ ( "datetime", E.string datetime ) ])
+                    corrId
+                    causeId
+
+        MealDeleted corrId causeId ->
+            Just <|
+                Events.SmallEnvelope
+                    modal.meal.streamId
+                    "MealDeleted"
+                    (E.object [])
+                    corrId
+                    causeId
 
 
 onIngredientUpdate : List String -> List String -> Cmd Msg
