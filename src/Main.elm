@@ -4,6 +4,7 @@ import Browser
 import Events
 import Html exposing (..)
 import Html.Attributes exposing (class, type_)
+import Html.Events
 import Json.Decode as D
 import Random
 import SearchableDropdown
@@ -73,11 +74,25 @@ update msg model =
             in
             ( { model | eventState = updatedEventState }, Cmd.map EventMsg cmd )
 
+        SaveMeal ->
+            ( model, Cmd.map EventMsg <| saveMeal model )
+
+
+saveMeal : Model -> Cmd (Events.Msg ())
+saveMeal model =
+    Events.buildEnvelope
+        "meal:0"
+        (Events.ItemAdded "Sample Meal")
+        "SaveMeal:0"
+        "SaveMeal:0"
+        model.eventState
+
 
 type Msg
     = NoOp
     | SearchableDropdownMsg SearchableDropdown.Msg
-    | EventMsg Events.Msg
+    | EventMsg (Events.Msg ())
+    | SaveMeal
 
 
 type alias FoodForm =
@@ -92,14 +107,15 @@ type alias Model =
     }
 
 
-greet =
-    h1 [] [ text "Hello, Elm!" ]
+title : Html msg
+title =
+    h1 [] [ text "FlexFoodLog" ]
 
 
 view : Model -> Html Msg
 view model =
     main_ [ class "container-fluid" ]
-        [ greet
+        [ title
         , newMeal model.foodForm
         ]
 
@@ -110,7 +126,12 @@ newMeal model =
         [ header [] [ h2 [] [ text "Record Meal" ] ]
         , form []
             [ Html.map SearchableDropdownMsg <| SearchableDropdown.view model.dropdown
-            , input [ type_ "datetime", Html.Attributes.placeholder "Date" ] []
+            , input [ type_ "datetime-local", Html.Attributes.placeholder "Date" ] []
             , textarea [ Html.Attributes.placeholder "Notes" ] []
+            , button
+                [ type_ "submit"
+                , Html.Events.preventDefaultOn "click" (D.succeed ( NoOp, True ))
+                ]
+                [ text "Save" ]
             ]
         ]

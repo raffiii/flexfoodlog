@@ -5638,6 +5638,19 @@ var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Events$ItemAdded = function (a) {
+	return {$: 'ItemAdded', a: a};
+};
+var $author$project$Main$saveMeal = function (model) {
+	return A5(
+		$author$project$Events$buildEnvelope,
+		'meal:0',
+		$author$project$Events$ItemAdded('Sample Meal'),
+		'SaveMeal:0',
+		'SaveMeal:0',
+		model.eventState);
+};
+var $elm$json$Json$Encode$null = _Json_encodeNull;
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
 		A3(
@@ -5653,28 +5666,37 @@ var $elm$json$Json$Encode$object = function (pairs) {
 };
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Events$encodeEvent = function (ev) {
-	if (ev.$ === 'TitleChanged') {
-		var title = ev.a;
-		return _Utils_Tuple2(
-			'TitleChanged',
-			$elm$json$Json$Encode$object(
-				_List_fromArray(
-					[
-						_Utils_Tuple2(
-						'title',
-						$elm$json$Json$Encode$string(title))
-					])));
-	} else {
-		var name = ev.a;
-		return _Utils_Tuple2(
-			'ItemAdded',
-			$elm$json$Json$Encode$object(
-				_List_fromArray(
-					[
-						_Utils_Tuple2(
-						'name',
-						$elm$json$Json$Encode$string(name))
-					])));
+	switch (ev.$) {
+		case 'TitleChanged':
+			var title = ev.a;
+			return _Utils_Tuple2(
+				'TitleChanged',
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'title',
+							$elm$json$Json$Encode$string(title))
+						])));
+		case 'ItemAdded':
+			var name = ev.a;
+			return _Utils_Tuple2(
+				'ItemAdded',
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'name',
+							$elm$json$Json$Encode$string(name))
+						])));
+		case 'Modification':
+			var f = ev.a;
+			var a = ev.b;
+			return f(a);
+		case 'Undo':
+			return _Utils_Tuple2('Undo', $elm$json$Json$Encode$null);
+		default:
+			return _Utils_Tuple2('Redo', $elm$json$Json$Encode$null);
 	}
 };
 var $elm$json$Json$Encode$int = _Json_wrap;
@@ -5777,6 +5799,12 @@ var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$SearchableDropdown$update = F2(
 	function (msg, model) {
+		var toggleItem = function (item) {
+			return A2($elm$core$List$member, item, model.selectedItems) ? A2(
+				$elm$core$List$filter,
+				$elm$core$Basics$neq(item),
+				model.selectedItems) : A2($elm$core$List$cons, item, model.selectedItems);
+		};
 		switch (msg.$) {
 			case 'ToggleDropdown':
 				return _Utils_update(
@@ -5789,17 +5817,27 @@ var $author$project$SearchableDropdown$update = F2(
 					{isOpen: true, searchTerm: term});
 			case 'ToggleItem':
 				var item = msg.a;
-				var updatedSelected = A2($elm$core$List$member, item, model.selectedItems) ? A2(
-					$elm$core$List$filter,
-					$elm$core$Basics$neq(item),
-					model.selectedItems) : A2($elm$core$List$cons, item, model.selectedItems);
+				var updatedSelected = toggleItem(item);
 				return _Utils_update(
 					model,
-					{selectedItems: updatedSelected});
-			default:
+					{searchTerm: '', selectedItems: updatedSelected});
+			case 'KeyDown':
+				var kc = msg.a;
+				var term = msg.b;
+				if (kc === 13) {
+					var updatedSelected = toggleItem(term);
+					return _Utils_update(
+						model,
+						{searchTerm: '', selectedItems: updatedSelected});
+				} else {
+					return model;
+				}
+			case 'CloseDropdown':
 				return _Utils_update(
 					model,
 					{isOpen: false});
+			default:
+				return model;
 		}
 	});
 var $author$project$Main$update = F2(
@@ -5820,7 +5858,7 @@ var $author$project$Main$update = F2(
 								{dropdown: updatedDropdown})
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'EventMsg':
 				var subMsg = msg.a;
 				var _v1 = A2($author$project$Events$update, subMsg, model.eventState);
 				var updatedEventState = _v1.a;
@@ -5830,6 +5868,13 @@ var $author$project$Main$update = F2(
 						model,
 						{eventState: updatedEventState}),
 					A2($elm$core$Platform$Cmd$map, $author$project$Main$EventMsg, cmd));
+			default:
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$elm$core$Platform$Cmd$map,
+						$author$project$Main$EventMsg,
+						$author$project$Main$saveMeal(model)));
 		}
 	});
 var $elm$json$Json$Decode$value = _Json_decodeValue;
@@ -5841,21 +5886,13 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 			$elm$json$Json$Encode$string(string));
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $elm$html$Html$h1 = _VirtualDom_node('h1');
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$Main$greet = A2(
-	$elm$html$Html$h1,
-	_List_Nil,
-	_List_fromArray(
-		[
-			$elm$html$Html$text('Hello, Elm!')
-		]));
 var $elm$html$Html$main_ = _VirtualDom_node('main');
+var $author$project$Main$NoOp = {$: 'NoOp'};
 var $author$project$Main$SearchableDropdownMsg = function (a) {
 	return {$: 'SearchableDropdownMsg', a: a};
 };
 var $elm$html$Html$article = _VirtualDom_node('article');
+var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$form = _VirtualDom_node('form');
 var $elm$html$Html$h2 = _VirtualDom_node('h2');
 var $elm$html$Html$header = _VirtualDom_node('header');
@@ -5863,12 +5900,30 @@ var $elm$html$Html$input = _VirtualDom_node('input');
 var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
 var $elm$html$Html$map = $elm$virtual_dom$VirtualDom$map;
 var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
+var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
+	return {$: 'MayPreventDefault', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$preventDefaultOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
+	});
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $elm$html$Html$textarea = _VirtualDom_node('textarea');
 var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
+var $author$project$SearchableDropdown$CloseDropdown = {$: 'CloseDropdown'};
+var $author$project$SearchableDropdown$NoOp = {$: 'NoOp'};
 var $author$project$SearchableDropdown$SearchChanged = function (a) {
 	return {$: 'SearchChanged', a: a};
 };
 var $author$project$SearchableDropdown$ToggleDropdown = {$: 'ToggleDropdown'};
+var $author$project$SearchableDropdown$ToggleItem = function (a) {
+	return {$: 'ToggleItem', a: a};
+};
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
 		return A2(
@@ -5885,10 +5940,8 @@ var $elm$core$List$isEmpty = function (xs) {
 		return false;
 	}
 };
+var $elm$html$Html$Events$keyCode = A2($elm$json$Json$Decode$field, 'keyCode', $elm$json$Json$Decode$int);
 var $elm$html$Html$li = _VirtualDom_node('li');
-var $author$project$SearchableDropdown$ToggleItem = function (a) {
-	return {$: 'ToggleItem', a: a};
-};
 var $elm$json$Json$Encode$bool = _Json_wrap;
 var $elm$html$Html$Attributes$boolProperty = F2(
 	function (key, bool) {
@@ -5902,7 +5955,6 @@ var $elm$html$Html$label = _VirtualDom_node('label');
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
 var $elm$html$Html$Events$on = F2(
 	function (event, decoder) {
 		return A2(
@@ -5991,7 +6043,25 @@ var $author$project$SearchableDropdown$view = function (model) {
 						$elm$html$Html$Attributes$type_('search'),
 						$elm$html$Html$Attributes$placeholder('Meal Item...'),
 						$elm$html$Html$Attributes$value(model.searchTerm),
-						$elm$html$Html$Events$onInput($author$project$SearchableDropdown$SearchChanged)
+						$elm$html$Html$Events$onInput($author$project$SearchableDropdown$SearchChanged),
+						A2(
+						$elm$html$Html$Events$preventDefaultOn,
+						'keydown',
+						A2(
+							$elm$json$Json$Decode$map,
+							function (kc) {
+								switch (kc) {
+									case 13:
+										return _Utils_Tuple2(
+											$author$project$SearchableDropdown$ToggleItem(model.searchTerm),
+											true);
+									case 27:
+										return _Utils_Tuple2($author$project$SearchableDropdown$CloseDropdown, true);
+									default:
+										return _Utils_Tuple2($author$project$SearchableDropdown$NoOp, false);
+								}
+							},
+							$elm$html$Html$Events$keyCode))
 					]),
 				_List_Nil)
 			]));
@@ -6003,7 +6073,15 @@ var $author$project$SearchableDropdown$view = function (model) {
 		[
 			$elm$html$Html$Attributes$class('dropdown')
 		]);
-	var allItems = (model.searchTerm === '') ? model.items : A2($elm$core$List$cons, model.searchTerm, model.items);
+	var combinedItems = _Utils_ap(
+		model.selectedItems,
+		A2(
+			$elm$core$List$filter,
+			function (item) {
+				return !A2($elm$core$List$member, item, model.selectedItems);
+			},
+			model.items));
+	var allItems = (model.searchTerm === '') ? combinedItems : (A2($elm$core$List$member, model.searchTerm, model.items) ? combinedItems : A2($elm$core$List$cons, model.searchTerm, combinedItems));
 	return A2(
 		$elm$html$Html$details,
 		detailsOpen,
@@ -6077,7 +6155,7 @@ var $author$project$Main$newMeal = function (model) {
 						$elm$html$Html$input,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$type_('datetime'),
+								$elm$html$Html$Attributes$type_('datetime-local'),
 								$elm$html$Html$Attributes$placeholder('Date')
 							]),
 						_List_Nil),
@@ -6087,10 +6165,33 @@ var $author$project$Main$newMeal = function (model) {
 							[
 								$elm$html$Html$Attributes$placeholder('Notes')
 							]),
-						_List_Nil)
+						_List_Nil),
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$type_('submit'),
+								A2(
+								$elm$html$Html$Events$preventDefaultOn,
+								'click',
+								$elm$json$Json$Decode$succeed(
+									_Utils_Tuple2($author$project$Main$NoOp, true)))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Save')
+							]))
 					]))
 			]));
 };
+var $elm$html$Html$h1 = _VirtualDom_node('h1');
+var $author$project$Main$title = A2(
+	$elm$html$Html$h1,
+	_List_Nil,
+	_List_fromArray(
+		[
+			$elm$html$Html$text('FlexFoodLog')
+		]));
 var $author$project$Main$view = function (model) {
 	return A2(
 		$elm$html$Html$main_,
@@ -6100,7 +6201,7 @@ var $author$project$Main$view = function (model) {
 			]),
 		_List_fromArray(
 			[
-				$author$project$Main$greet,
+				$author$project$Main$title,
 				$author$project$Main$newMeal(model.foodForm)
 			]));
 };

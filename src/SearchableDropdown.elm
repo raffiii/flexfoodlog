@@ -3,6 +3,7 @@ module SearchableDropdown exposing (Model, Msg, init, update, view)
 import Html exposing (Html, details, summary)
 import Html.Attributes
 import Html.Events
+import Json.Decode as D
 
 
 
@@ -35,10 +36,20 @@ type Msg
     | SearchChanged String
     | ToggleItem String
     | CloseDropdown
+    | KeyDown Int String
+    | NoOp
 
 
 update : Msg -> Model -> Model
 update msg model =
+    let
+        toggleItem item =
+            if List.member item model.selectedItems then
+                List.filter ((/=) item) model.selectedItems
+
+            else
+                item :: model.selectedItems
+    in
     case msg of
         ToggleDropdown ->
             { model | isOpen = not model.isOpen }
@@ -49,16 +60,28 @@ update msg model =
         ToggleItem item ->
             let
                 updatedSelected =
-                    if List.member item model.selectedItems then
-                        List.filter ((/=) item) model.selectedItems
-
-                    else
-                        item :: model.selectedItems
+                    toggleItem item
             in
-            { model | selectedItems = updatedSelected }
+            { model | selectedItems = updatedSelected, searchTerm = "" }
+
+        KeyDown kc term ->
+            case kc of
+                13 ->
+                    -- KeyCode Enter
+                    let
+                        updatedSelected =
+                            toggleItem term
+                    in
+                    { model | selectedItems = updatedSelected, searchTerm = "" }
+
+                _ ->
+                    model
 
         CloseDropdown ->
             { model | isOpen = False }
+
+        NoOp ->
+            model
 
 
 
@@ -83,12 +106,18 @@ makeItem item isSelected =
 view : Model -> Html Msg
 view model =
     let
+        combinedItems =
+            model.selectedItems ++ (model.items |> List.filter (\item -> not (List.member item model.selectedItems)))
+
         allItems =
             if model.searchTerm == "" then
-                model.items
+                combinedItems
+
+            else if List.member model.searchTerm model.items then
+                combinedItems
 
             else
-                model.searchTerm :: model.items
+                model.searchTerm :: combinedItems
 
         detailsOpen =
             if model.isOpen then
@@ -104,6 +133,23 @@ view model =
                     , Html.Attributes.placeholder "Meal Item..."
                     , Html.Attributes.value model.searchTerm
                     , Html.Events.onInput SearchChanged
+                    , Html.Events.preventDefaultOn "keydown" <|
+                        D.map
+                            (\kc ->
+                                case kc of
+                                    -- Enter
+                                    13 ->
+                                        ( ToggleItem model.searchTerm, True )
+
+                                    -- Escape
+                                    27 ->
+                                        ( CloseDropdown, True )
+
+                                    -- Other keys
+                                    _ ->
+                                        ( NoOp, False )
+                            )
+                            Html.Events.keyCode
                     ]
                     []
                 ]

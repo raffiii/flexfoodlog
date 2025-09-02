@@ -1,4 +1,4 @@
-module Events exposing (Envelope, Event(..), buildEnvelope, update, State, Msg)
+module Events exposing (Envelope, Event(..), Msg, State, buildEnvelope, update)
 
 import Json.Encode as E
 import Ports
@@ -7,9 +7,11 @@ import Task
 import Time exposing (Posix)
 import Ulid
 
+
 schemaVersion : Int
 schemaVersion =
     1
+
 
 type alias State =
     { seed : Seed
@@ -20,17 +22,20 @@ type alias State =
 -- A domain event (define more as needed)
 
 
-type Event
+type Event a
     = TitleChanged String
     | ItemAdded String
+    | Modification (a -> ( String, E.Value )) a
+    | Undo
+    | Redo
 
 
-type Msg
+type Msg a
     = NoOp
-    | BuiltEnvelope ( State, Envelope )
+    | BuiltEnvelope ( State, Envelope a )
 
 
-update : Msg -> State -> ( State, Cmd msg )
+update : Msg a -> State -> ( State, Cmd msg )
 update msg state =
     case msg of
         NoOp ->
@@ -44,18 +49,18 @@ update msg state =
 -- Envelope: metadata + event
 
 
-type alias Envelope =
+type alias Envelope a =
     { eventId : String -- ULID/UUID generated in Elm
     , streamId : String -- e.g. "todo:42"
     , timestamp : Posix
     , schemaVersion : Int
-    , event : Event
+    , event : Event a
     , correlationId : String
     , causationId : String
     }
 
 
-encodeEvent : Event -> ( String, E.Value )
+encodeEvent : Event a -> ( String, E.Value )
 encodeEvent ev =
     case ev of
         TitleChanged title ->
@@ -68,8 +73,17 @@ encodeEvent ev =
             , E.object [ ( "name", E.string name ) ]
             )
 
+        Modification f a ->
+            f a
 
-encodeEnvelope : Envelope -> E.Value
+        Undo ->
+            ( "Undo", E.null )
+
+        Redo ->
+            ( "Redo", E.null )
+
+
+encodeEnvelope : Envelope  a -> E.Value
 encodeEnvelope env =
     let
         ( eventType, payload ) =
@@ -91,7 +105,7 @@ encodeEnvelope env =
         ]
 
 
-buildEnvelope : String -> Event -> String -> String -> State -> Cmd Msg
+buildEnvelope : String -> Event a -> String -> String -> State -> Cmd (Msg a)
 buildEnvelope streamId event correlationId causationId state =
     Time.now
         |> Task.perform
