@@ -55,12 +55,31 @@
             elmPackages.elm-review
             elmPackages.elm-test
             nodejs
+            jq
           ];
 
-          shellHook = ''
+            shellHook = ''
             echo "Elm dev shell ready!"
             echo "elm: $(elm --version)"
             echo "node: $(node --version)"
+            mkdir -p .vscode
+            elmPath=$(which elm)
+            elmFormatPath=$(which elm-format)
+            elmTestPath=$(which elm-test)
+            
+            if [ ! -f .vscode/settings.json ]; then
+              cat '{}' > .vscode/settings.json 
+            fi
+
+            jq --arg elmPath "$elmPath" \
+              --arg elmFormatPath "$elmFormatPath" \
+              --arg elmTestPath "$elmTestPath" \
+              '. + {
+              "elmLS.elmPath": $elmPath,
+              "elmLS.elmFormatPath": $elmFormatPath,
+              "elmLS.elmTestPath": $elmTestPath
+              }' .vscode/settings.json > .vscode/settings.json.tmp && mv .vscode/settings.json.tmp .vscode/settings.json
+          
           '';
         };
       });
