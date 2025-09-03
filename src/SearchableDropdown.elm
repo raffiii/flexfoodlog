@@ -1,4 +1,4 @@
-module SearchableDropdown exposing (Model, Msg, init, update, view)
+module SearchableDropdown exposing (Model, Msg, init, setItems, update, view)
 
 import Html exposing (Html, details, summary)
 import Html.Attributes
@@ -25,6 +25,10 @@ init items =
     , selectedItems = []
     , items = items
     }
+
+setItems : List String -> Model -> Model
+setItems items model =
+    { model | items = items }
 
 
 

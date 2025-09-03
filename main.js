@@ -5242,10 +5242,9 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$FoodForm = F2(
-	function (datetime, dropdown) {
-		return {datetime: datetime, dropdown: dropdown};
-	});
+var $author$project$Main$MealMsg = function (a) {
+	return {$: 'MealMsg', a: a};
+};
 var $author$project$Events$State = function (seed) {
 	return {seed: seed};
 };
@@ -5255,10 +5254,14 @@ var $author$project$SearchableDropdown$init = function (items) {
 	return {isOpen: false, items: items, searchTerm: '', selectedItems: _List_Nil};
 };
 var $author$project$Meal$initMeal = {datetime: '', items: _List_Nil, notes: $elm$core$Maybe$Nothing, streamId: 'Meal:*'};
-var $author$project$Meal$initModal = {
-	dropdown: $author$project$SearchableDropdown$init(_List_Nil),
-	meal: $author$project$Meal$initMeal
-};
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Ports$queryEventType = _Platform_outgoingPort('queryEventType', $elm$json$Json$Encode$string);
+var $author$project$Meal$initModal = _Utils_Tuple2(
+	{
+		dropdown: $author$project$SearchableDropdown$init(_List_Nil),
+		meal: $author$project$Meal$initMeal
+	},
+	$author$project$Ports$queryEventType('IngredientAdded'));
 var $elm$random$Random$Seed = F2(
 	function (a, b) {
 		return {$: 'Seed', a: a, b: b};
@@ -5279,8 +5282,7 @@ var $elm$random$Random$initialSeed = function (x) {
 		A2($elm$random$Random$Seed, state2, incr));
 };
 var $elm$json$Json$Decode$int = _Json_decodeInt;
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$core$Platform$Cmd$map = _Platform_map;
 var $elm$core$Result$withDefault = F2(
 	function (def, result) {
 		if (result.$ === 'Ok') {
@@ -5298,25 +5300,68 @@ var $author$project$Main$init = function (flags) {
 			$elm$json$Json$Decode$decodeValue,
 			A2($elm$json$Json$Decode$field, 'seed', $elm$json$Json$Decode$int),
 			flags));
-	var foodForm = A2(
-		$author$project$Main$FoodForm,
-		'',
-		$author$project$SearchableDropdown$init(
-			_List_fromArray(
-				['Apple', 'Banana', 'Carrot', 'Date', 'Eggplant'])));
 	var eventState = $author$project$Events$State(
 		$elm$random$Random$initialSeed(seed));
-	var model = {eventState: eventState, foodForm: foodForm, mealModal: $author$project$Meal$initModal};
-	return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+	var _v0 = $author$project$Meal$initModal;
+	var mealModel = _v0.a;
+	var cmd_ = _v0.b;
+	var model = {eventState: eventState, mealModal: mealModel};
+	return _Utils_Tuple2(
+		model,
+		A2($elm$core$Platform$Cmd$map, $author$project$Main$MealMsg, cmd_));
 };
+var $author$project$Meal$NoOp = {$: 'NoOp'};
+var $author$project$Meal$RetrievedIngredients = function (a) {
+	return {$: 'RetrievedIngredients', a: a};
+};
+var $elm$json$Json$Decode$andThen = _Json_andThen;
+var $elm$json$Json$Decode$fail = _Json_fail;
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $elm$core$Debug$log = _Debug_log;
+var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $author$project$Ports$onEvents = _Platform_incomingPort('onEvents', $elm$json$Json$Decode$value);
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Meal$addedIngredientsSub = $author$project$Ports$onEvents(
+	function (value) {
+		var _v0 = A2(
+			$elm$json$Json$Decode$decodeValue,
+			$elm$json$Json$Decode$list(
+				A2(
+					$elm$json$Json$Decode$andThen,
+					function (type_) {
+						var _v1 = A2($elm$core$Debug$log, '', type_);
+						if (_v1 === 'IngredientAdded') {
+							return A2(
+								$elm$json$Json$Decode$field,
+								'payload',
+								A2($elm$json$Json$Decode$field, 'ingredient', $elm$json$Json$Decode$string));
+						} else {
+							return $elm$json$Json$Decode$fail('Not an IngredientAdded event');
+						}
+					},
+					A2($elm$json$Json$Decode$field, 'type', $elm$json$Json$Decode$string))),
+			value);
+		if (_v0.$ === 'Ok') {
+			var items = _v0.a;
+			return $author$project$Meal$RetrievedIngredients(
+				A2($elm$core$Debug$log, 'Retrieved', items));
+		} else {
+			return A2($elm$core$Debug$log, 'Error on retrieving', $author$project$Meal$NoOp);
+		}
+	});
 var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
+var $elm$core$Platform$Sub$map = _Platform_map;
+var $author$project$Main$subscriptions = function (model) {
+	return $elm$core$Platform$Sub$batch(
+		_List_fromArray(
+			[
+				A2($elm$core$Platform$Sub$map, $author$project$Main$MealMsg, $author$project$Meal$addedIngredientsSub)
+			]));
+};
 var $author$project$Main$EventMsg = function (a) {
 	return {$: 'EventMsg', a: a};
 };
-var $author$project$Main$MealMsg = function (a) {
-	return {$: 'MealMsg', a: a};
-};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $author$project$Events$BuiltEnvelope = function (a) {
 	return {$: 'BuiltEnvelope', a: a};
 };
@@ -5635,8 +5680,14 @@ var $author$project$Events$buildEnvelope = F2(
 			},
 			$elm$time$Time$now);
 	});
-var $elm$core$Debug$log = _Debug_log;
-var $elm$core$Platform$Cmd$map = _Platform_map;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$Ports$queryAllEvents = _Platform_outgoingPort(
+	'queryAllEvents',
+	function ($) {
+		return $elm$json$Json$Encode$null;
+	});
+var $author$project$Ports$queryStreamEvents = _Platform_outgoingPort('queryStreamEvents', $elm$json$Json$Encode$string);
 var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$json$Json$Encode$object = function (pairs) {
 	return _Json_wrap(
@@ -5651,7 +5702,6 @@ var $elm$json$Json$Encode$object = function (pairs) {
 			_Json_emptyObject(_Utils_Tuple0),
 			pairs));
 };
-var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Events$encodeEnvelope = function (env) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -5703,6 +5753,16 @@ var $author$project$Events$update = F2(
 					$author$project$Events$encodeEnvelope(envelope)));
 		}
 	});
+var $author$project$Meal$IngredientAdded = function (a) {
+	return {$: 'IngredientAdded', a: a};
+};
+var $author$project$Meal$IngredientRemoved = function (a) {
+	return {$: 'IngredientRemoved', a: a};
+};
+var $author$project$Meal$MakeEvent = F2(
+	function (a, b) {
+		return {$: 'MakeEvent', a: a, b: b};
+	});
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
 		return A3(
@@ -5744,8 +5804,119 @@ var $elm$core$List$member = F2(
 			},
 			xs);
 	});
-var $elm$core$Basics$neq = _Utils_notEqual;
 var $elm$core$Basics$not = _Basics_not;
+var $author$project$Meal$onIngredientUpdate = F2(
+	function (oldItems, newItems) {
+		var removedItems = A2(
+			$elm$core$List$filter,
+			function (item) {
+				return !A2($elm$core$List$member, item, newItems);
+			},
+			oldItems);
+		var removeCmds = A2(
+			$elm$core$List$map,
+			function (item) {
+				return $author$project$Meal$IngredientRemoved(item);
+			},
+			removedItems);
+		var addedItems = A2(
+			$elm$core$List$filter,
+			function (item) {
+				return !A2($elm$core$List$member, item, oldItems);
+			},
+			newItems);
+		var addCmds = A2(
+			$elm$core$List$map,
+			function (item) {
+				return $author$project$Meal$IngredientAdded(item);
+			},
+			addedItems);
+		var tasks = A2(
+			$elm$core$List$map,
+			$elm$core$Task$succeed,
+			_Utils_ap(addCmds, removeCmds));
+		return $elm$core$Platform$Cmd$batch(
+			A2(
+				$elm$core$List$map,
+				$elm$core$Task$perform(
+					function (e) {
+						return A2(
+							$author$project$Meal$MakeEvent,
+							e,
+							_Utils_Tuple2('MealModal:0', 'SD:0'));
+					}),
+				tasks));
+	});
+var $author$project$SearchableDropdown$setItems = F2(
+	function (items, model) {
+		return _Utils_update(
+			model,
+			{items: items});
+	});
+var $author$project$Events$SmallEnvelope = F5(
+	function (streamId, type_, payload, correlationId, causationId) {
+		return {causationId: causationId, correlationId: correlationId, payload: payload, streamId: streamId, type_: type_};
+	});
+var $author$project$Meal$toEnvelope = F3(
+	function (ev, _v0, modal) {
+		var correId = _v0.a;
+		var causeId = _v0.b;
+		var mealId = modal.meal.streamId;
+		var _v1 = function () {
+			switch (ev.$) {
+				case 'IngredientAdded':
+					var ingredient = ev.a;
+					return _Utils_Tuple2(
+						'IngredientAdded',
+						$elm$json$Json$Encode$string(ingredient));
+				case 'IngredientRemoved':
+					var ingredient = ev.a;
+					return _Utils_Tuple2(
+						'IngredientRemoved',
+						$elm$json$Json$Encode$string(ingredient));
+				case 'MealCreated':
+					return _Utils_Tuple2(
+						'MealCreated',
+						$elm$json$Json$Encode$object(_List_Nil));
+				case 'NotesUpdated':
+					var notes = ev.a;
+					return _Utils_Tuple2(
+						'NotesUpdated',
+						function () {
+							if (notes.$ === 'Just') {
+								var n = notes.a;
+								return $elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2(
+											'notes',
+											$elm$json$Json$Encode$string(n))
+										]));
+							} else {
+								return $elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2('notes', $elm$json$Json$Encode$null)
+										]));
+							}
+						}());
+				case 'DateTimeUpdated':
+					var datetime = ev.a;
+					return _Utils_Tuple2(
+						'DateTimeUpdated',
+						$elm$json$Json$Encode$string(datetime));
+				default:
+					return _Utils_Tuple2(
+						'MealDeleted',
+						$elm$json$Json$Encode$object(_List_Nil));
+			}
+		}();
+		var type_ = _v1.a;
+		var value = _v1.b;
+		return $elm$core$Maybe$Just(
+			A5($author$project$Events$SmallEnvelope, mealId, type_, value, correId, causeId));
+	});
+var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$SearchableDropdown$update = F3(
 	function (onUpdate, msg, model) {
 		var toggleItem = function (item) {
@@ -5808,170 +5979,10 @@ var $author$project$SearchableDropdown$update = F3(
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});
-var $author$project$Meal$IngredientAdded = F3(
-	function (a, b, c) {
-		return {$: 'IngredientAdded', a: a, b: b, c: c};
-	});
-var $author$project$Meal$IngredientRemoved = F3(
-	function (a, b, c) {
-		return {$: 'IngredientRemoved', a: a, b: b, c: c};
-	});
-var $author$project$Meal$MakeEvent = function (a) {
-	return {$: 'MakeEvent', a: a};
-};
-var $author$project$Meal$onIngredientUpdate = F2(
-	function (oldItems, newItems) {
-		var removedItems = A2(
-			$elm$core$List$filter,
-			function (item) {
-				return !A2($elm$core$List$member, item, newItems);
-			},
-			oldItems);
-		var removeCmds = A2(
-			$elm$core$List$map,
-			function (item) {
-				return A3($author$project$Meal$IngredientRemoved, 'MealModal:0', 'SD:0', item);
-			},
-			removedItems);
-		var addedItems = A2(
-			$elm$core$List$filter,
-			function (item) {
-				return !A2($elm$core$List$member, item, oldItems);
-			},
-			newItems);
-		var addCmds = A2(
-			$elm$core$List$map,
-			function (item) {
-				return A3($author$project$Meal$IngredientAdded, 'MealModal:0', 'SD:0', item);
-			},
-			addedItems);
-		var tasks = A2(
-			$elm$core$List$map,
-			$elm$core$Task$succeed,
-			_Utils_ap(addCmds, removeCmds));
-		return $elm$core$Platform$Cmd$batch(
-			A2(
-				$elm$core$List$map,
-				$elm$core$Task$perform($author$project$Meal$MakeEvent),
-				tasks));
-	});
-var $author$project$Events$SmallEnvelope = F5(
-	function (streamId, type_, payload, correlationId, causationId) {
-		return {causationId: causationId, correlationId: correlationId, payload: payload, streamId: streamId, type_: type_};
-	});
-var $elm$json$Json$Encode$null = _Json_encodeNull;
-var $author$project$Meal$toEnvelope = F2(
-	function (ev, modal) {
-		switch (ev.$) {
-			case 'IngredientAdded':
-				var corrId = ev.a;
-				var causeId = ev.b;
-				var ingredient = ev.c;
-				return $elm$core$Maybe$Just(
-					A5(
-						$author$project$Events$SmallEnvelope,
-						modal.meal.streamId,
-						'IngredientAdded',
-						$elm$json$Json$Encode$object(
-							_List_fromArray(
-								[
-									_Utils_Tuple2(
-									'ingredient',
-									$elm$json$Json$Encode$string(ingredient))
-								])),
-						corrId,
-						causeId));
-			case 'IngredientRemoved':
-				var corrId = ev.a;
-				var causeId = ev.b;
-				var ingredient = ev.c;
-				return $elm$core$Maybe$Just(
-					A5(
-						$author$project$Events$SmallEnvelope,
-						modal.meal.streamId,
-						'IngredientRemoved',
-						$elm$json$Json$Encode$object(
-							_List_fromArray(
-								[
-									_Utils_Tuple2(
-									'ingredient',
-									$elm$json$Json$Encode$string(ingredient))
-								])),
-						corrId,
-						causeId));
-			case 'MealCreated':
-				var corrId = ev.a;
-				var causeId = ev.b;
-				return $elm$core$Maybe$Just(
-					A5(
-						$author$project$Events$SmallEnvelope,
-						modal.meal.streamId,
-						'MealCreated',
-						$elm$json$Json$Encode$object(_List_Nil),
-						corrId,
-						causeId));
-			case 'NotesUpdated':
-				var corrId = ev.a;
-				var causeId = ev.b;
-				var notes = ev.c;
-				return $elm$core$Maybe$Just(
-					A5(
-						$author$project$Events$SmallEnvelope,
-						modal.meal.streamId,
-						'NotesUpdated',
-						function () {
-							if (notes.$ === 'Just') {
-								var n = notes.a;
-								return $elm$json$Json$Encode$object(
-									_List_fromArray(
-										[
-											_Utils_Tuple2(
-											'notes',
-											$elm$json$Json$Encode$string(n))
-										]));
-							} else {
-								return $elm$json$Json$Encode$object(
-									_List_fromArray(
-										[
-											_Utils_Tuple2('notes', $elm$json$Json$Encode$null)
-										]));
-							}
-						}(),
-						corrId,
-						causeId));
-			case 'DateTimeUpdated':
-				var corrId = ev.a;
-				var causeId = ev.b;
-				var datetime = ev.c;
-				return $elm$core$Maybe$Just(
-					A5(
-						$author$project$Events$SmallEnvelope,
-						modal.meal.streamId,
-						'DateTimeUpdated',
-						$elm$json$Json$Encode$object(
-							_List_fromArray(
-								[
-									_Utils_Tuple2(
-									'datetime',
-									$elm$json$Json$Encode$string(datetime))
-								])),
-						corrId,
-						causeId));
-			default:
-				var corrId = ev.a;
-				var causeId = ev.b;
-				return $elm$core$Maybe$Just(
-					A5(
-						$author$project$Events$SmallEnvelope,
-						modal.meal.streamId,
-						'MealDeleted',
-						$elm$json$Json$Encode$object(_List_Nil),
-						corrId,
-						causeId));
-		}
-	});
 var $author$project$Meal$updateMeal = F4(
 	function (mapEnvelope, mapMsg, msg, modal) {
+		var oldMeal = modal.meal;
+		var oldDropdown = modal.dropdown;
 		switch (msg.$) {
 			case 'SDMsg':
 				var subMsg = msg.a;
@@ -5985,7 +5996,8 @@ var $author$project$Meal$updateMeal = F4(
 					mapMsg(cmd));
 			case 'MakeEvent':
 				var event = msg.a;
-				var _v2 = A2($author$project$Meal$toEnvelope, event, modal);
+				var cause = msg.b;
+				var _v2 = A3($author$project$Meal$toEnvelope, event, cause, modal);
 				if (_v2.$ === 'Just') {
 					var envelope = _v2.a;
 					return _Utils_Tuple2(
@@ -5996,7 +6008,6 @@ var $author$project$Meal$updateMeal = F4(
 				}
 			case 'NoteChanged':
 				var notes = msg.a;
-				var oldMeal = modal.meal;
 				return _Utils_Tuple2(
 					_Utils_update(
 						modal,
@@ -6010,7 +6021,6 @@ var $author$project$Meal$updateMeal = F4(
 					$elm$core$Platform$Cmd$none);
 			case 'DateTimeChanged':
 				var datetime = msg.a;
-				var oldMeal = modal.meal;
 				return _Utils_Tuple2(
 					_Utils_update(
 						modal,
@@ -6018,6 +6028,15 @@ var $author$project$Meal$updateMeal = F4(
 							meal: _Utils_update(
 								oldMeal,
 								{datetime: datetime})
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'RetrievedIngredients':
+				var items = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						modal,
+						{
+							dropdown: A2($author$project$SearchableDropdown$setItems, items, oldDropdown)
 						}),
 					$elm$core$Platform$Cmd$none);
 			default:
@@ -6029,36 +6048,14 @@ var $author$project$Main$update = F2(
 		switch (msg.$) {
 			case 'NoOp':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			case 'SearchableDropdownMsg':
-				var subMsg = msg.a;
-				var foodForm = model.foodForm;
-				var _v1 = A3(
-					$author$project$SearchableDropdown$update,
-					F2(
-						function (_v2, _v3) {
-							return $elm$core$Platform$Cmd$none;
-						}),
-					subMsg,
-					foodForm.dropdown);
-				var updatedDropdown = _v1.a;
-				var cmd = _v1.b;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							foodForm: _Utils_update(
-								foodForm,
-								{dropdown: updatedDropdown})
-						}),
-					cmd);
 			case 'EventMsg':
 				var subMsg = msg.a;
-				var _v4 = A2(
+				var _v1 = A2(
 					$author$project$Events$update,
 					A2($elm$core$Debug$log, 'Event update', subMsg),
 					model.eventState);
-				var updatedEventState = _v4.a;
-				var cmd = _v4.b;
+				var updatedEventState = _v1.a;
+				var cmd = _v1.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
@@ -6066,9 +6063,9 @@ var $author$project$Main$update = F2(
 					A2($elm$core$Platform$Cmd$map, $author$project$Main$EventMsg, cmd));
 			case 'SaveMeal':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			default:
+			case 'MealMsg':
 				var subMsg = msg.a;
-				var _v5 = A4(
+				var _v2 = A4(
 					$author$project$Meal$updateMeal,
 					function (se) {
 						return A2(
@@ -6079,16 +6076,24 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$map($author$project$Main$MealMsg),
 					subMsg,
 					model.mealModal);
-				var updatedMealModal = _v5.a;
-				var cmd = _v5.b;
+				var updatedMealModal = _v2.a;
+				var cmd = _v2.b;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{mealModal: updatedMealModal}),
 					cmd);
+			default:
+				return _Utils_Tuple2(
+					model,
+					$elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								$author$project$Ports$queryAllEvents(_Utils_Tuple0),
+								$author$project$Ports$queryStreamEvents('')
+							])));
 		}
 	});
-var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -6100,32 +6105,107 @@ var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('
 var $elm$html$Html$main_ = _VirtualDom_node('main');
 var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
 var $elm$html$Html$map = $elm$virtual_dom$VirtualDom$map;
-var $author$project$Main$NoOp = {$: 'NoOp'};
-var $author$project$Main$SearchableDropdownMsg = function (a) {
-	return {$: 'SearchableDropdownMsg', a: a};
-};
+var $elm$html$Html$h1 = _VirtualDom_node('h1');
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$title = A2(
+	$elm$html$Html$h1,
+	_List_Nil,
+	_List_fromArray(
+		[
+			$elm$html$Html$text('FlexFoodLog')
+		]));
 var $elm$html$Html$article = _VirtualDom_node('article');
+var $elm$virtual_dom$VirtualDom$attribute = F2(
+	function (key, value) {
+		return A2(
+			_VirtualDom_attribute,
+			_VirtualDom_noOnOrFormAction(key),
+			_VirtualDom_noJavaScriptOrHtmlUri(value));
+	});
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$html$Html$button = _VirtualDom_node('button');
-var $elm$html$Html$form = _VirtualDom_node('form');
-var $elm$html$Html$h2 = _VirtualDom_node('h2');
+var $elm$virtual_dom$VirtualDom$node = function (tag) {
+	return _VirtualDom_node(
+		_VirtualDom_noScript(tag));
+};
+var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
+var $author$project$Meal$dialog = F2(
+	function (attrs, nodes) {
+		return A3($elm$html$Html$node, 'dialog', attrs, nodes);
+	});
 var $elm$html$Html$header = _VirtualDom_node('header');
+var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$html$Html$Attributes$rel = _VirtualDom_attribute('rel');
+var $elm$html$Html$strong = _VirtualDom_node('strong');
+var $author$project$Meal$DateTimeChanged = function (a) {
+	return {$: 'DateTimeChanged', a: a};
+};
+var $author$project$Meal$DateTimeUpdated = function (a) {
+	return {$: 'DateTimeUpdated', a: a};
+};
+var $author$project$Meal$NoteChanged = function (a) {
+	return {$: 'NoteChanged', a: a};
+};
+var $author$project$Meal$NotesUpdated = function (a) {
+	return {$: 'NotesUpdated', a: a};
+};
+var $author$project$Meal$SDMsg = function (a) {
+	return {$: 'SDMsg', a: a};
+};
 var $elm$html$Html$input = _VirtualDom_node('input');
-var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
-var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
-	return {$: 'MayPreventDefault', a: a};
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
 };
 var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$preventDefaultOn = F2(
+var $elm$html$Html$Events$on = F2(
 	function (event, decoder) {
 		return A2(
 			$elm$virtual_dom$VirtualDom$on,
 			event,
-			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
 	});
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $elm$html$Html$Events$onBlur = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'blur',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
+var $elm$html$Html$Attributes$placeholder = $elm$html$Html$Attributes$stringProperty('placeholder');
 var $elm$html$Html$textarea = _VirtualDom_node('textarea');
 var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$SearchableDropdown$CloseDropdown = {$: 'CloseDropdown'};
 var $author$project$SearchableDropdown$NoOp = {$: 'NoOp'};
 var $author$project$SearchableDropdown$SearchChanged = function (a) {
@@ -6135,14 +6215,6 @@ var $author$project$SearchableDropdown$ToggleDropdown = {$: 'ToggleDropdown'};
 var $author$project$SearchableDropdown$ToggleItem = function (a) {
 	return {$: 'ToggleItem', a: a};
 };
-var $elm$virtual_dom$VirtualDom$attribute = F2(
-	function (key, value) {
-		return A2(
-			_VirtualDom_attribute,
-			_VirtualDom_noOnOrFormAction(key),
-			_VirtualDom_noJavaScriptOrHtmlUri(value));
-	});
-var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$html$Html$details = _VirtualDom_node('details');
 var $elm$core$List$isEmpty = function (xs) {
 	if (!xs.b) {
@@ -6163,16 +6235,6 @@ var $elm$html$Html$Attributes$boolProperty = F2(
 	});
 var $elm$html$Html$Attributes$checked = $elm$html$Html$Attributes$boolProperty('checked');
 var $elm$html$Html$label = _VirtualDom_node('label');
-var $elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var $elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
 var $elm$html$Html$Events$onClick = function (msg) {
 	return A2(
 		$elm$html$Html$Events$on,
@@ -6205,42 +6267,19 @@ var $author$project$SearchableDropdown$makeItem = F2(
 						]))
 				]));
 	});
-var $elm$html$Html$Events$alwaysStop = function (x) {
-	return _Utils_Tuple2(x, true);
+var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
+	return {$: 'MayPreventDefault', a: a};
 };
-var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
-	return {$: 'MayStopPropagation', a: a};
-};
-var $elm$html$Html$Events$stopPropagationOn = F2(
+var $elm$html$Html$Events$preventDefaultOn = F2(
 	function (event, decoder) {
 		return A2(
 			$elm$virtual_dom$VirtualDom$on,
 			event,
-			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+			$elm$virtual_dom$VirtualDom$MayPreventDefault(decoder));
 	});
-var $elm$json$Json$Decode$at = F2(
-	function (fields, decoder) {
-		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
-	});
-var $elm$json$Json$Decode$string = _Json_decodeString;
-var $elm$html$Html$Events$targetValue = A2(
-	$elm$json$Json$Decode$at,
-	_List_fromArray(
-		['target', 'value']),
-	$elm$json$Json$Decode$string);
-var $elm$html$Html$Events$onInput = function (tagger) {
-	return A2(
-		$elm$html$Html$Events$stopPropagationOn,
-		'input',
-		A2(
-			$elm$json$Json$Decode$map,
-			$elm$html$Html$Events$alwaysStop,
-			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
-};
 var $elm$html$Html$summary = _VirtualDom_node('summary');
 var $elm$core$String$toLower = _String_toLower;
 var $elm$html$Html$ul = _VirtualDom_node('ul');
-var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$SearchableDropdown$view = function (model) {
 	var search = A2(
 		$elm$html$Html$li,
@@ -6334,110 +6373,6 @@ var $author$project$SearchableDropdown$view = function (model) {
 							allItems))))
 			]));
 };
-var $author$project$Main$newMeal = function (model) {
-	return A2(
-		$elm$html$Html$article,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$header,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$h2,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Record Meal')
-							]))
-					])),
-				A2(
-				$elm$html$Html$form,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$map,
-						$author$project$Main$SearchableDropdownMsg,
-						$author$project$SearchableDropdown$view(model.dropdown)),
-						A2(
-						$elm$html$Html$input,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$type_('datetime-local'),
-								$elm$html$Html$Attributes$placeholder('Date')
-							]),
-						_List_Nil),
-						A2(
-						$elm$html$Html$textarea,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$placeholder('Notes')
-							]),
-						_List_Nil),
-						A2(
-						$elm$html$Html$button,
-						_List_fromArray(
-							[
-								$elm$html$Html$Attributes$type_('submit'),
-								A2(
-								$elm$html$Html$Events$preventDefaultOn,
-								'click',
-								$elm$json$Json$Decode$succeed(
-									_Utils_Tuple2($author$project$Main$NoOp, true)))
-							]),
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Save')
-							]))
-					]))
-			]));
-};
-var $elm$html$Html$h1 = _VirtualDom_node('h1');
-var $author$project$Main$title = A2(
-	$elm$html$Html$h1,
-	_List_Nil,
-	_List_fromArray(
-		[
-			$elm$html$Html$text('FlexFoodLog')
-		]));
-var $elm$virtual_dom$VirtualDom$node = function (tag) {
-	return _VirtualDom_node(
-		_VirtualDom_noScript(tag));
-};
-var $elm$html$Html$node = $elm$virtual_dom$VirtualDom$node;
-var $author$project$Meal$dialog = F2(
-	function (attrs, nodes) {
-		return A3($elm$html$Html$node, 'dialog', attrs, nodes);
-	});
-var $elm$html$Html$p = _VirtualDom_node('p');
-var $elm$html$Html$Attributes$rel = _VirtualDom_attribute('rel');
-var $elm$html$Html$strong = _VirtualDom_node('strong');
-var $author$project$Meal$DateTimeChanged = function (a) {
-	return {$: 'DateTimeChanged', a: a};
-};
-var $author$project$Meal$DateTimeUpdated = F3(
-	function (a, b, c) {
-		return {$: 'DateTimeUpdated', a: a, b: b, c: c};
-	});
-var $author$project$Meal$NoteChanged = function (a) {
-	return {$: 'NoteChanged', a: a};
-};
-var $author$project$Meal$NotesUpdated = F3(
-	function (a, b, c) {
-		return {$: 'NotesUpdated', a: a, b: b, c: c};
-	});
-var $author$project$Meal$SDMsg = function (a) {
-	return {$: 'SDMsg', a: a};
-};
-var $elm$html$Html$Events$onBlur = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'blur',
-		$elm$json$Json$Decode$succeed(msg));
-};
 var $author$project$Meal$viewForm = function (modal) {
 	return A2(
 		$elm$html$Html$p,
@@ -6457,8 +6392,10 @@ var $author$project$Meal$viewForm = function (modal) {
 						$elm$html$Html$Attributes$value(modal.meal.datetime),
 						$elm$html$Html$Events$onInput($author$project$Meal$DateTimeChanged),
 						$elm$html$Html$Events$onBlur(
-						$author$project$Meal$MakeEvent(
-							A3($author$project$Meal$DateTimeUpdated, 'MealModal', 'MealModal', modal.meal.datetime)))
+						A2(
+							$author$project$Meal$MakeEvent,
+							$author$project$Meal$DateTimeUpdated(modal.meal.datetime),
+							_Utils_Tuple2('MealModal', 'MealModal')))
 					]),
 				_List_Nil),
 				A2(
@@ -6470,8 +6407,10 @@ var $author$project$Meal$viewForm = function (modal) {
 						A2($elm$core$Maybe$withDefault, '', modal.meal.notes)),
 						$elm$html$Html$Events$onInput($author$project$Meal$NoteChanged),
 						$elm$html$Html$Events$onBlur(
-						$author$project$Meal$MakeEvent(
-							A3($author$project$Meal$NotesUpdated, 'MealModal', 'MealModal', modal.meal.notes)))
+						A2(
+							$author$project$Meal$MakeEvent,
+							$author$project$Meal$NotesUpdated(modal.meal.notes),
+							_Utils_Tuple2('MealModal', 'MealModal')))
 					]),
 				_List_Nil)
 			]));
@@ -6531,7 +6470,6 @@ var $author$project$Main$view = function (model) {
 		_List_fromArray(
 			[
 				$author$project$Main$title,
-				$author$project$Main$newMeal(model.foodForm),
 				A2(
 				$elm$html$Html$map,
 				$author$project$Main$MealMsg,
@@ -6539,12 +6477,5 @@ var $author$project$Main$view = function (model) {
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
-	{
-		init: $author$project$Main$init,
-		subscriptions: function (_v0) {
-			return $elm$core$Platform$Sub$none;
-		},
-		update: $author$project$Main$update,
-		view: $author$project$Main$view
-	});
+	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)(0)}});}(this));
