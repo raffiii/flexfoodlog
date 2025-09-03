@@ -21,6 +21,8 @@ type alias Meal =
 type Msg
     = NoOp
     | MakeEvent Event
+    | NoteChanged String
+    | DateTimeChanged String
     | SDMsg SD.Msg
 
 
@@ -85,8 +87,21 @@ viewForm : Modal -> Html Msg
 viewForm modal =
     p []
         [ Html.map SDMsg <| SD.view modal.dropdown
-        , input [ Attr.type_ "datetime-local", Attr.placeholder "Date" ] []
-        , textarea [ Attr.placeholder "Notes" ] []
+        , input
+            [ Attr.type_ "datetime-local"
+            , Attr.placeholder "Date"
+            , Attr.value modal.meal.datetime
+            , Html.Events.onInput DateTimeChanged 
+            , Html.Events.onBlur (MakeEvent <| DateTimeUpdated "MealModal" "MealModal" modal.meal.datetime)
+            ]
+            []
+        , textarea
+            [ Attr.placeholder "Notes"
+            , Attr.value (Maybe.withDefault "" modal.meal.notes)
+            , Html.Events.onInput NoteChanged
+            , Html.Events.onBlur (MakeEvent <| NotesUpdated "MealModal" "MealModal" modal.meal.notes)
+            ]
+            []
 
         -- , button
         --     [ Attr.type_ "submit"
@@ -118,7 +133,21 @@ updateMeal mapEnvelope mapMsg msg modal =
                 Nothing ->
                     ( modal, Cmd.none )
 
-        _ ->
+        NoteChanged notes ->
+            let
+                oldMeal =
+                    modal.meal
+            in
+            ( { modal | meal = { oldMeal | notes = Just notes } }, Cmd.none )
+
+        DateTimeChanged datetime ->
+            let
+                oldMeal =
+                    modal.meal
+            in
+            ( { modal | meal = { oldMeal | datetime = datetime } }, Cmd.none )
+
+        NoOp ->
             ( modal, Cmd.none )
 
 
@@ -149,7 +178,7 @@ toEnvelope ev modal =
                     corrId
                     causeId
 
-        MealCreated corrId causeId meal ->
+        MealCreated corrId causeId _ ->
             Just <|
                 Events.SmallEnvelope
                     modal.meal.streamId

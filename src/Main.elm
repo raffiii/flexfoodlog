@@ -25,8 +25,8 @@ type Msg
 
 -- type DbMsg
 --     = MealTransform Meal.DbMsg
-
-
+type State
+    = RecordMeal Meal.Modal
 type alias FoodForm =
     { datetime : String
     , dropdown : SearchableDropdown.Model

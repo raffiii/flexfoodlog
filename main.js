@@ -5859,28 +5859,115 @@ var $author$project$Events$SmallEnvelope = F5(
 	function (streamId, type_, payload, correlationId, causationId) {
 		return {causationId: causationId, correlationId: correlationId, payload: payload, streamId: streamId, type_: type_};
 	});
+var $elm$json$Json$Encode$null = _Json_encodeNull;
 var $author$project$Meal$toEnvelope = F2(
 	function (ev, modal) {
-		if (ev.$ === 'IngredientAdded') {
-			var corrId = ev.a;
-			var causeId = ev.b;
-			var ingredient = ev.c;
-			return $elm$core$Maybe$Just(
-				A5(
-					$author$project$Events$SmallEnvelope,
-					modal.meal.streamId,
-					'IngredientAdded',
-					$elm$json$Json$Encode$object(
-						_List_fromArray(
-							[
-								_Utils_Tuple2(
-								'ingredient',
-								$elm$json$Json$Encode$string(ingredient))
-							])),
-					corrId,
-					causeId));
-		} else {
-			return $elm$core$Maybe$Nothing;
+		switch (ev.$) {
+			case 'IngredientAdded':
+				var corrId = ev.a;
+				var causeId = ev.b;
+				var ingredient = ev.c;
+				return $elm$core$Maybe$Just(
+					A5(
+						$author$project$Events$SmallEnvelope,
+						modal.meal.streamId,
+						'IngredientAdded',
+						$elm$json$Json$Encode$object(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									'ingredient',
+									$elm$json$Json$Encode$string(ingredient))
+								])),
+						corrId,
+						causeId));
+			case 'IngredientRemoved':
+				var corrId = ev.a;
+				var causeId = ev.b;
+				var ingredient = ev.c;
+				return $elm$core$Maybe$Just(
+					A5(
+						$author$project$Events$SmallEnvelope,
+						modal.meal.streamId,
+						'IngredientRemoved',
+						$elm$json$Json$Encode$object(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									'ingredient',
+									$elm$json$Json$Encode$string(ingredient))
+								])),
+						corrId,
+						causeId));
+			case 'MealCreated':
+				var corrId = ev.a;
+				var causeId = ev.b;
+				return $elm$core$Maybe$Just(
+					A5(
+						$author$project$Events$SmallEnvelope,
+						modal.meal.streamId,
+						'MealCreated',
+						$elm$json$Json$Encode$object(_List_Nil),
+						corrId,
+						causeId));
+			case 'NotesUpdated':
+				var corrId = ev.a;
+				var causeId = ev.b;
+				var notes = ev.c;
+				return $elm$core$Maybe$Just(
+					A5(
+						$author$project$Events$SmallEnvelope,
+						modal.meal.streamId,
+						'NotesUpdated',
+						function () {
+							if (notes.$ === 'Just') {
+								var n = notes.a;
+								return $elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2(
+											'notes',
+											$elm$json$Json$Encode$string(n))
+										]));
+							} else {
+								return $elm$json$Json$Encode$object(
+									_List_fromArray(
+										[
+											_Utils_Tuple2('notes', $elm$json$Json$Encode$null)
+										]));
+							}
+						}(),
+						corrId,
+						causeId));
+			case 'DateTimeUpdated':
+				var corrId = ev.a;
+				var causeId = ev.b;
+				var datetime = ev.c;
+				return $elm$core$Maybe$Just(
+					A5(
+						$author$project$Events$SmallEnvelope,
+						modal.meal.streamId,
+						'DateTimeUpdated',
+						$elm$json$Json$Encode$object(
+							_List_fromArray(
+								[
+									_Utils_Tuple2(
+									'datetime',
+									$elm$json$Json$Encode$string(datetime))
+								])),
+						corrId,
+						causeId));
+			default:
+				var corrId = ev.a;
+				var causeId = ev.b;
+				return $elm$core$Maybe$Just(
+					A5(
+						$author$project$Events$SmallEnvelope,
+						modal.meal.streamId,
+						'MealDeleted',
+						$elm$json$Json$Encode$object(_List_Nil),
+						corrId,
+						causeId));
 		}
 	});
 var $author$project$Meal$updateMeal = F4(
@@ -5907,6 +5994,32 @@ var $author$project$Meal$updateMeal = F4(
 				} else {
 					return _Utils_Tuple2(modal, $elm$core$Platform$Cmd$none);
 				}
+			case 'NoteChanged':
+				var notes = msg.a;
+				var oldMeal = modal.meal;
+				return _Utils_Tuple2(
+					_Utils_update(
+						modal,
+						{
+							meal: _Utils_update(
+								oldMeal,
+								{
+									notes: $elm$core$Maybe$Just(notes)
+								})
+						}),
+					$elm$core$Platform$Cmd$none);
+			case 'DateTimeChanged':
+				var datetime = msg.a;
+				var oldMeal = modal.meal;
+				return _Utils_Tuple2(
+					_Utils_update(
+						modal,
+						{
+							meal: _Utils_update(
+								oldMeal,
+								{datetime: datetime})
+						}),
+					$elm$core$Platform$Cmd$none);
 			default:
 				return _Utils_Tuple2(modal, $elm$core$Platform$Cmd$none);
 		}
@@ -6302,8 +6415,28 @@ var $author$project$Meal$dialog = F2(
 var $elm$html$Html$p = _VirtualDom_node('p');
 var $elm$html$Html$Attributes$rel = _VirtualDom_attribute('rel');
 var $elm$html$Html$strong = _VirtualDom_node('strong');
+var $author$project$Meal$DateTimeChanged = function (a) {
+	return {$: 'DateTimeChanged', a: a};
+};
+var $author$project$Meal$DateTimeUpdated = F3(
+	function (a, b, c) {
+		return {$: 'DateTimeUpdated', a: a, b: b, c: c};
+	});
+var $author$project$Meal$NoteChanged = function (a) {
+	return {$: 'NoteChanged', a: a};
+};
+var $author$project$Meal$NotesUpdated = F3(
+	function (a, b, c) {
+		return {$: 'NotesUpdated', a: a, b: b, c: c};
+	});
 var $author$project$Meal$SDMsg = function (a) {
 	return {$: 'SDMsg', a: a};
+};
+var $elm$html$Html$Events$onBlur = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'blur',
+		$elm$json$Json$Decode$succeed(msg));
 };
 var $author$project$Meal$viewForm = function (modal) {
 	return A2(
@@ -6320,14 +6453,25 @@ var $author$project$Meal$viewForm = function (modal) {
 				_List_fromArray(
 					[
 						$elm$html$Html$Attributes$type_('datetime-local'),
-						$elm$html$Html$Attributes$placeholder('Date')
+						$elm$html$Html$Attributes$placeholder('Date'),
+						$elm$html$Html$Attributes$value(modal.meal.datetime),
+						$elm$html$Html$Events$onInput($author$project$Meal$DateTimeChanged),
+						$elm$html$Html$Events$onBlur(
+						$author$project$Meal$MakeEvent(
+							A3($author$project$Meal$DateTimeUpdated, 'MealModal', 'MealModal', modal.meal.datetime)))
 					]),
 				_List_Nil),
 				A2(
 				$elm$html$Html$textarea,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$placeholder('Notes')
+						$elm$html$Html$Attributes$placeholder('Notes'),
+						$elm$html$Html$Attributes$value(
+						A2($elm$core$Maybe$withDefault, '', modal.meal.notes)),
+						$elm$html$Html$Events$onInput($author$project$Meal$NoteChanged),
+						$elm$html$Html$Events$onBlur(
+						$author$project$Meal$MakeEvent(
+							A3($author$project$Meal$NotesUpdated, 'MealModal', 'MealModal', modal.meal.notes)))
 					]),
 				_List_Nil)
 			]));
