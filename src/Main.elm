@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Events
+import Event
 import Html exposing (..)
 import Html.Attributes exposing (class, type_)
 import Html.Events
@@ -18,7 +18,7 @@ import Ports
 
 type Msg
     = NoOp
-    | EventMsg Events.Msg
+    | EventMsg Event.Msg
     | SaveMeal
     | MealMsg Meal.Msg
     | QueryAll
@@ -33,9 +33,12 @@ type Msg
 type State
     = RecordMeal Meal.Modal
 
+type alias DataState 
+    = { meals : List Meal.Meal }
+
 
 type alias Model =
-    { eventState : Events.State
+    { eventState : Event.Model
     , mealModal : Meal.Modal
     }
 
@@ -43,6 +46,8 @@ type alias Model =
 type Event
     = MealEvent Meal.Event String -- StreamId
 
+type TypeEvent
+    = MealTypeEvent Meal.HydrationEvent
 
 
 -- MAIN
@@ -77,7 +82,7 @@ init flags =
                 |> Result.withDefault 42
 
         eventState =
-            Events.State (Random.initialSeed seed)
+            Event.initialModel (Random.initialSeed seed)
 
         ( mealModel, cmd_ ) =
             Meal.initModal
@@ -99,9 +104,9 @@ update msg model =
         EventMsg subMsg ->
             let
                 ( updatedEventState, cmd ) =
-                    Events.update (Debug.log "Event update" subMsg) model.eventState
+                    Event.update (\_ -> NoOp) (Debug.log "Event update" subMsg) model.eventState
             in
-            ( { model | eventState = updatedEventState }, Cmd.map EventMsg cmd )
+            ( { model | eventState = updatedEventState }, cmd )
 
         SaveMeal ->
             ( model, Cmd.none )
@@ -110,9 +115,6 @@ update msg model =
             let
                 ( updatedMealModal, cmd ) =
                     Meal.updateMeal
-                        (\se ->
-                            Cmd.map EventMsg <| Events.buildEnvelope se model.eventState
-                        )
                         (Cmd.map MealMsg)
                         subMsg
                         model.mealModal
@@ -134,20 +136,16 @@ view model =
 
 -- HELPERS
 
-
-parseEvent : D.Decoder Event
-parseEvent =
-    D.field "type" D.string
-        |> D.andThen
-            (\t ->
-                D.oneOf
-                    [ D.map2 MealEvent
-                        (D.field "payload" (Meal.parseMealEvent t))
-                        (D.field "streamId" D.string)
-                    ]
-            )
-
-
 title : Html msg
 title =
     h1 [] [ text "FlexFoodLog" ]
+
+initialState : DataState
+initialState =
+    { meals = [] }
+
+applyTypeEvent : TypeEvent -> DataState -> DataState
+applyTypeEvent typeEvent state =
+    case typeEvent of
+        MealTypeEvent mealEvent ->
+            Meal.applyMealEventList mealEvent state.meals |> (\meals -> { state | meals = meals })

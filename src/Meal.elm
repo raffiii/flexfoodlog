@@ -1,6 +1,6 @@
-module Meal exposing (..)
+module Meal exposing (Meal, Msg, Modal, Event, InteractionEvent, HydrationEvent, initModal, viewMealModal, updateMeal, addedIngredientsSub, applyMealEventList)
 
-import Events
+import Event as Ev
 import Html exposing (..)
 import Html.Attributes as Attr
 import Html.Events exposing (..)
@@ -9,6 +9,7 @@ import Json.Encode as E
 import Ports
 import SearchableDropdown as SD
 import Task
+import Time exposing (Month(..))
 
 
 type alias Meal =
@@ -16,6 +17,7 @@ type alias Meal =
     , items : List String
     , notes : Maybe String
     , streamId : String
+    , streamPosition : Int
     }
 
 
@@ -35,13 +37,29 @@ type alias Modal =
 
 
 type Event
-    = MealCreated
-    | IngredientAdded String
+    = IngredientAdded String
     | IngredientRemoved String
     | NotesUpdated (Maybe String)
     | DateTimeUpdated String
-    | MealDeleted
+    | DeleteMeal
 
+
+type InteractionEvent
+    = InteractionMealEvent Event String -- StreamId
+    | InteractionCreateMeal -- CorrelationId
+
+
+type HydrationEvent
+    = HydrateMealEvent Event String -- StreamId
+    | HydrateCreateMeal String -- StreamId
+
+-- CONSTANTS
+correlationId : String
+correlationId =
+    causationId
+causationId : String
+causationId =
+    "meal-modal-1"
 
 
 -- INIT
@@ -53,6 +71,7 @@ initMeal =
     , items = []
     , notes = Nothing
     , streamId = "Meal:*"
+    , streamPosition = 0
     }
 
 
@@ -70,14 +89,23 @@ addedIngredientsSub =
     Ports.onEvents
         (\value ->
             -- Decode [ { type: "IngredientAdded", name: "Apple" }, ... ]
-            case D.decodeValue (D.list ( (D.field "type" D.string) |> D.andThen (\type_ ->
-                case Debug.log "" type_ of
-                    "IngredientAdded" ->
-                        D.field "payload" (D.field "ingredient" D.string)
+            case
+                D.decodeValue
+                    (D.list
+                        (D.field "type" D.string
+                            |> D.andThen
+                                (\type_ ->
+                                    case Debug.log "" type_ of
+                                        "IngredientAdded" ->
+                                            D.field "payload" (D.field "ingredient" D.string)
 
-                    _ ->
-                        D.fail "Not an IngredientAdded event"
-                ))) value of
+                                        _ ->
+                                            D.fail "Not an IngredientAdded event"
+                                )
+                        )
+                    )
+                    value
+            of
                 Ok items ->
                     RetrievedIngredients <| Debug.log "Retrieved" items
 
@@ -140,8 +168,8 @@ viewForm modal =
 -- UPDATE
 
 
-updateMeal : (Events.SmallEnvelope -> Cmd m) -> (Cmd Msg -> Cmd m) -> Msg -> Modal -> ( Modal, Cmd m )
-updateMeal mapEnvelope mapMsg msg modal =
+updateMeal : (Cmd Msg -> Cmd m) -> Msg -> Modal -> ( Modal, Cmd m )
+updateMeal mapMsg msg modal =
     let
         oldMeal =
             modal.meal
@@ -157,13 +185,12 @@ updateMeal mapEnvelope mapMsg msg modal =
             in
             ( { modal | dropdown = updatedDropdown }, mapMsg cmd )
 
-        MakeEvent event cause ->
-            case toEnvelope event cause modal of
-                Just envelope ->
-                    ( modal, mapEnvelope envelope )
-
-                Nothing ->
-                    ( modal, Cmd.none )
+        MakeEvent event _ ->
+                let
+                    cmd =
+                        persistMealEvent (InteractionMealEvent event oldMeal.streamId) oldMeal
+                in
+                ( modal, mapMsg cmd )
 
         NoteChanged notes ->
             ( { modal | meal = { oldMeal | notes = Just notes } }, Cmd.none )
@@ -178,79 +205,141 @@ updateMeal mapEnvelope mapMsg msg modal =
             ( modal, Cmd.none )
 
 
-toEnvelope : Event -> ( String, String ) -> Modal -> Maybe Events.SmallEnvelope
-toEnvelope ev ( correId, causeId ) modal =
-    let
-        mealId =
-            modal.meal.streamId
+encodeMealEvent : Event -> ( String, E.Value )
+encodeMealEvent ev =
+    case ev of
+        IngredientAdded ingredient ->
+            ( "IngredientAdded"
+            , E.object [ ( "ingredient", E.string ingredient ) ]
+            )
 
-        ( type_, value ) =
-            case ev of
-                IngredientAdded ingredient ->
-                    ( "IngredientAdded", E.string ingredient )
+        IngredientRemoved ingredient ->
+            ( "IngredientRemoved"
+            , E.object [ ( "ingredient", E.string ingredient ) ]
+            )
 
-                IngredientRemoved ingredient ->
-                    ( "IngredientRemoved", E.string ingredient )
+        NotesUpdated notes ->
+            ( "NotesUpdated"
+            , E.object [ ( "notes", notes |> Maybe.map E.string |> Maybe.withDefault E.null ) ]
+            )
 
-                MealCreated ->
-                    ( "MealCreated", E.object [] )
+        DateTimeUpdated datetime ->
+            ( "DateTimeUpdated"
+            , E.object [ ( "datetime", E.string datetime ) ]
+            )
 
-                NotesUpdated notes ->
-                    ( "NotesUpdated"
-                    , case notes of
-                        Just n ->
-                            E.object [ ( "notes", E.string n ) ]
-
-                        Nothing ->
-                            E.object [ ( "notes", E.null ) ]
-                    )
-
-                DateTimeUpdated datetime ->
-                    ( "DateTimeUpdated", E.string datetime )
-
-                MealDeleted ->
-                    ( "MealDeleted", E.object [] )
-    in
-    Just <|
-        Events.SmallEnvelope
-            mealId
-            type_
-            value
-            correId
-            causeId
+        DeleteMeal ->
+            ( "MealDeleted", E.null )
 
 
-parseMealEvent : String -> D.Decoder Event
+persistMealEvent : InteractionEvent -> Meal -> Cmd Msg
+persistMealEvent mealEvent meal =
+    case mealEvent of
+        InteractionMealEvent ev streamId ->
+            let
+                ( eventType, payload ) =
+                    encodeMealEvent ev
+
+                eventData =
+                    { streamId = streamId
+                    , expectedStreamPosition = meal.streamPosition + 1
+                    , type_ = eventType
+                    , schemaVersion = 1
+                    , payload = payload
+                    , correlationId = correlationId
+                    , causationId = causationId
+                    }
+            in
+            Ev.persist eventData |> Cmd.map (\_ -> NoOp)
+
+        InteractionCreateMeal ->
+            let
+                ( eventType, payload ) =
+                    encodeMealEvent (DateTimeUpdated meal.datetime)
+
+                eventData =
+                    { streamType = "meal"
+                    , type_ = eventType
+                    , schemaVersion = 1
+                    , payload = payload
+                    , correlationId = correlationId
+                    , causationId = causationId
+                    }
+            in
+            Ev.persistNew eventData |> Cmd.map (\_ -> NoOp)
+
+
+parseMealEvent : String -> D.Decoder HydrationEvent
 parseMealEvent type_ =
+    let
+        mapMealEvent decoder =
+            D.map2 HydrateMealEvent decoder (D.field "streamId" D.string)
+    in
     case type_ of
         "IngredientAdded" ->
-            D.map IngredientAdded (D.field "name" D.string)
+            mapMealEvent
+                (D.map IngredientAdded (D.field "name" D.string))
 
         "IngredientRemoved" ->
-            D.map IngredientRemoved (D.field "name" D.string)
+            mapMealEvent
+                (D.map IngredientRemoved (D.field "name" D.string))
 
         "MealCreated" ->
-            D.succeed MealCreated
+            D.map HydrateCreateMeal (D.field "streamId" D.string)
 
         "NotesUpdated" ->
-            D.map NotesUpdated (D.field "notes" (D.nullable D.string))
+            mapMealEvent <|
+                D.map NotesUpdated (D.field "notes" (D.nullable D.string))
 
         "DateTimeUpdated" ->
-            D.map DateTimeUpdated (D.field "datetime" D.string)
+            mapMealEvent <|
+                D.map DateTimeUpdated (D.field "datetime" D.string)
 
         "MealDeleted" ->
-            D.succeed MealDeleted
+            mapMealEvent <|
+                D.succeed DeleteMeal
 
         _ ->
             D.fail ("Unknown event type: " ++ type_)
 
 
-applyMealEvent : Event -> Maybe Meal -> Maybe Meal
-applyMealEvent ev maybeMeal =
-    case ( ev, maybeMeal ) of
-        ( MealCreated, Nothing ) ->
-            Just initMeal
+applyMealEventList : HydrationEvent -> List Meal -> List Meal
+applyMealEventList mealEvent meals =
+    case mealEvent of
+        HydrateCreateMeal streamId ->
+            let
+                newMeal =
+                    { initMeal
+                        | streamId = streamId
+                    }
+            in
+            newMeal :: meals
 
+        HydrateMealEvent ev streamId ->
+            let
+                mealWithId =
+                    List.filter (\m -> m.streamId == streamId) meals |> List.head
+
+                updatedMeal =
+                    applyEvent ev mealWithId
+            in
+            case ( mealWithId, updatedMeal ) of
+                ( Nothing, Just newMeal ) ->
+                    newMeal :: meals
+
+                ( Just _, Just updated ) ->
+                    updated :: List.filter (\m -> m.streamId /= streamId) meals
+
+                ( Just _, Nothing ) ->
+                    List.filter (\m -> m.streamId /= streamId) meals
+
+                ( Nothing, Nothing ) ->
+                    meals
+
+
+applyEvent : Event -> Maybe Meal -> Maybe Meal
+applyEvent ev maybeMeal =
+    case ( ev, maybeMeal ) of
         ( IngredientAdded ingredient, Just meal ) ->
             Just { meal | items = ingredient :: meal.items }
 
@@ -263,11 +352,11 @@ applyMealEvent ev maybeMeal =
         ( DateTimeUpdated datetime, Just meal ) ->
             Just { meal | datetime = datetime }
 
-        ( MealDeleted, Just _ ) ->
+        ( DeleteMeal, Just _ ) ->
             Nothing
 
-        _ ->
-            maybeMeal
+        ( _, Nothing ) ->
+            Nothing
 
 
 onIngredientUpdate : List String -> List String -> Cmd Msg
