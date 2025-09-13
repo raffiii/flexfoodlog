@@ -1,9 +1,9 @@
-module EditMeal exposing (Meal, Model, Msg, init, initWithMeal, update, view, emptyMeal)
+module EditMeal exposing (Model, Msg, empty, init, initWithMeal, update, view)
 
 import Event as Ev
 import Html exposing (..)
 import Html.Attributes as Attr
-import Html.Events
+import Html.Events exposing (onClick)
 import Json.Encode as E
 import SearchableDropdown as SD
 
@@ -12,18 +12,12 @@ import SearchableDropdown as SD
 -- Model
 
 
-type alias Meal =
+type alias Model =
     { streamId : String
     , streamPosition : Int
-    , ingredients : List String
+    , ingredients : SD.Model
     , datetime : String
     , notes : String
-    }
-
-
-type alias Model =
-    { meal : Meal
-    , dropdown : SD.Model
     }
 
 
@@ -70,11 +64,11 @@ causationId =
 -- INIT
 
 
-emptyMeal : Meal
-emptyMeal =
+empty : List String -> Model
+empty ingredientsList =
     { streamId = ""
     , streamPosition = 0
-    , ingredients = []
+    , ingredients = SD.init ingredientsList
     , datetime = ""
     , notes = ""
     }
@@ -92,29 +86,37 @@ init ingredientsList =
             , causationId = causationId
             }
     in
-    ( Model emptyMeal (SD.init ingredientsList)
+    ( empty ingredientsList
     , Ev.persistNew eventData |> Cmd.map (\_ -> NoOp)
     )
 
 
-initWithMeal : Meal -> List String -> ( Model, Cmd Msg )
+initWithMeal :
+    { streamId : String
+    , streamPosition : Int
+    , ingredients : List String
+    , datetime : String
+    , notes : String
+    }
+    -> List String
+    -> ( Model, Cmd Msg )
 initWithMeal meal ingredientsList =
-    ( Model meal (SD.init ingredientsList |> SD.setItems meal.ingredients), Cmd.none )
+    ( Model meal.streamId meal.streamPosition (SD.init ingredientsList |> SD.setItems meal.ingredients) meal.datetime meal.notes, Cmd.none )
 
 
 
 -- VIEW
 
 
-view : Model -> Html Msg
-view modal =
+view : Model -> (Msg -> msg) -> msg -> Html msg
+view modal mapMsg onClose =
     dialog [ Attr.attribute "open" "" ]
         [ article []
             [ header []
-                [ button [ Attr.attribute "aria-label" "Close", Attr.rel "prev" ] []
+                [ button [ Attr.attribute "aria-label" "Close", Attr.rel "prev", onClick onClose ] []
                 , p [] [ strong [] [ text "Edit Meal" ] ]
                 ]
-            , viewForm modal
+            , Html.map mapMsg <| viewForm modal
             ]
         ]
 
@@ -122,20 +124,20 @@ view modal =
 viewForm : Model -> Html Msg
 viewForm modal =
     p []
-        [ SD.view modal.dropdown DropdownMsg (MakeEvent << IngredientAdded) (MakeEvent << IngredientRemoved)
+        [ SD.view modal.ingredients DropdownMsg (MakeEvent << IngredientAdded) (MakeEvent << IngredientRemoved)
         , input
             [ Attr.type_ "datetime-local"
             , Attr.placeholder "Date"
-            , Attr.value modal.meal.datetime
+            , Attr.value modal.datetime
             , Html.Events.onInput DateTimeChanged
-            , Html.Events.onBlur (MakeEvent (DateTimeUpdated modal.meal.datetime))
+            , Html.Events.onBlur (MakeEvent (DateTimeUpdated modal.datetime))
             ]
             []
         , textarea
             [ Attr.placeholder "Notes"
-            , Attr.value modal.meal.notes
+            , Attr.value modal.notes
             , Html.Events.onInput NoteChanged
-            , Html.Events.onBlur (MakeEvent (NotesUpdated modal.meal.notes))
+            , Html.Events.onBlur (MakeEvent (NotesUpdated modal.notes))
             ]
             []
         ]
@@ -156,30 +158,22 @@ dialog attrs nodes =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        oldMeal =
-            model.meal
-    in
     case msg of
         DropdownMsg subMsg ->
             let
                 ( updatedDropdown, cmd ) =
-                    SD.update subMsg model.dropdown
+                    SD.update subMsg model.ingredients
             in
-            ( { model | dropdown = updatedDropdown }, cmd )
+            ( { model | ingredients = updatedDropdown }, cmd )
 
         MakeEvent event ->
-            let
-                ( cmd, meal ) =
-                    persistMealEvent (InteractionMealEvent event oldMeal.streamId) oldMeal
-            in
-            ( { model | meal = meal }, cmd )
+            persistMealEvent (InteractionMealEvent event model.streamId) model
 
         NoteChanged notes ->
-            ( { model | meal = { oldMeal | notes = notes } }, Cmd.none )
+            ( { model | notes = notes }, Cmd.none )
 
         DateTimeChanged datetime ->
-            ( { model | meal = { oldMeal | datetime = datetime } }, Cmd.none )
+            ( { model | datetime = datetime }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -216,7 +210,7 @@ encodeMealEvent ev =
             ( "MealDeleted", E.null )
 
 
-persistMealEvent : InteractionEvent -> Meal -> ( Cmd Msg, Meal )
+persistMealEvent : InteractionEvent -> Model -> ( Model, Cmd Msg )
 persistMealEvent mealEvent meal =
     case mealEvent of
         InteractionMealEvent ev streamId ->
@@ -234,7 +228,25 @@ persistMealEvent mealEvent meal =
                     , causationId = causationId
                     }
             in
-            ( Ev.persist eventData |> Cmd.map (\_ -> NoOp), meal )
+            ( applyPersistingEvent ev meal, Ev.persist eventData |> Cmd.map (\_ -> NoOp) )
 
         AssignedMealId newStreamId ->
-            ( Cmd.none, { meal | streamId = newStreamId } )
+            ( { meal | streamId = newStreamId }, Cmd.none )
+
+applyPersistingEvent : Event -> Model -> Model
+applyPersistingEvent ev model =
+    case ev of
+        IngredientAdded ingredient ->
+            { model | ingredients = SD.addItem ingredient model.ingredients }
+
+        IngredientRemoved ingredient ->
+            { model | ingredients = SD.removeItem ingredient model.ingredients }
+
+        NotesUpdated notes ->
+            { model | notes = notes }
+
+        DateTimeUpdated datetime ->
+            { model | datetime = datetime }
+
+        DeleteMeal ->
+            model

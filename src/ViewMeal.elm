@@ -4,7 +4,6 @@ module ViewMeal exposing
     , Model
     , Msg
     , applyMealEventList
-    , dummyInit
     , init
     , parseMealEvent
     , update
@@ -19,13 +18,18 @@ import Json.Decode as D
 
 
 type alias Model =
-    { meals : List EM.Meal
+    { meals : List Meal
     , dialog : Dialog
     }
 
 
 type alias Meal =
-    EM.Meal
+    { streamId : String
+    , streamPosition : Int
+    , ingredients : List String
+    , datetime : String
+    , notes : String
+    }
 
 
 type Dialog
@@ -35,7 +39,7 @@ type Dialog
 
 type Msg
     = NoOp
-    | OpenDialog EM.Meal
+    | OpenDialog Meal
     | OpenNewMealDialog
     | CloseDialog
     | EditMealMsg EM.Msg
@@ -62,31 +66,15 @@ init =
     , Cmd.none
     )
 
+emptyMeal : Meal
+emptyMeal =
+    { streamId = ""
+    , streamPosition = 0
+    , ingredients = []
+    , datetime = ""
+    , notes = ""
+    }
 
-dummyInit : ( Model, Cmd Msg )
-dummyInit =
-    let
-        meal1 =
-            { streamId = "meal-1"
-            , streamPosition = 1
-            , ingredients = [ "Chicken", "Rice" ]
-            , datetime = "2024-10-01 12:00"
-            , notes = "Delicious!"
-            }
-
-        meal2 =
-            { streamId = "meal-2"
-            , streamPosition = 1
-            , ingredients = [ "Beef", "Potatoes" ]
-            , datetime = "2024-10-02 18:30"
-            , notes = "Hearty meal."
-            }
-    in
-    ( { meals = [ meal1, meal2 ]
-      , dialog = Closed
-      }
-    , Cmd.none
-    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -150,11 +138,11 @@ view model =
                 text ""
 
             Open emodel ->
-                EM.view emodel |> Html.map EditMealMsg
+                EM.view emodel EditMealMsg CloseDialog
         ]
 
 
-viewMeal : EM.Meal -> Html Msg
+viewMeal : Meal -> Html Msg
 viewMeal meal =
     li []
         [ div []
@@ -238,7 +226,7 @@ applyEvent : Event -> Maybe Meal -> Maybe Meal
 applyEvent ev maybeMeal =
     case ( ev, maybeMeal ) of
         ( MealCreated, Nothing ) ->
-            Just EM.emptyMeal
+            Just emptyMeal
 
         ( MealCreated, Just _ ) ->
             maybeMeal

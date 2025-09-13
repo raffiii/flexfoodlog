@@ -1,4 +1,4 @@
-module SearchableDropdown exposing (Model, Msg, init, setItems, update, view)
+module SearchableDropdown exposing (Model, Msg, init, setItems, update, view, addItem, removeItem)
 
 import Html exposing (Html, details, summary)
 import Html.Attributes
@@ -61,6 +61,18 @@ update msg model =
             ( model, Cmd.none )
 
 
+addItem : String -> Model -> Model
+addItem item model =
+    if List.member item model.selectedItems then
+        model
+
+    else
+        { model | selectedItems = item :: model.selectedItems, searchTerm = "" }
+
+removeItem : String -> Model -> Model
+removeItem item model =
+    { model | selectedItems = List.filter (\i -> i /= item) model.selectedItems, searchTerm = "" }
+
 
 -- VIEW
 
@@ -81,7 +93,7 @@ makeItem toggleItem item isSelected =
 
 
 view : Model -> (Msg -> msg) -> (String -> msg) -> (String -> msg) -> Html msg
-view model mapParent addItem removeItem =
+view model mapParent add remove =
     let
         combinedItems =
             model.selectedItems ++ (model.items |> List.filter (\item -> not (List.member item model.selectedItems)))
@@ -105,10 +117,10 @@ view model mapParent addItem removeItem =
 
         toggleItem item isSelected =
             if isSelected then
-                removeItem item
+                remove item
 
             else
-                addItem item
+                add item
 
         keyDecoder =
             D.map
@@ -116,7 +128,7 @@ view model mapParent addItem removeItem =
                     case kc of
                         -- Enter
                         13 ->
-                            ( toggleItem model.searchTerm (List.member model.searchTerm model.selectedItems), True )
+                            Debug.log "Enter pressed results in Event: " ( toggleItem model.searchTerm (List.member model.searchTerm model.selectedItems), True )
 
                         -- Escape
                         27 ->
