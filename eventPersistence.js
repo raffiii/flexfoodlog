@@ -128,6 +128,7 @@ function setupPersistence(elmApp) {
     // ============================================================================
     if (elmApp.ports.persistEventCmd) {
       elmApp.ports.persistEventCmd.subscribe((envelope) => {
+        console.log("persistEventCmd received envelope:", envelope);
         const tx = db.transaction(EVENTS_STORE, "readwrite");
         const store = tx.objectStore(EVENTS_STORE);
         const index = store.index("streamId_idx");

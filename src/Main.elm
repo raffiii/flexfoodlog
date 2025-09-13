@@ -1,15 +1,13 @@
 module Main exposing (main)
 
 import Browser
-import Event
+import Event as Ev
 import Html exposing (..)
-import Html.Attributes exposing (class, type_)
-import Html.Events
+import Html.Attributes exposing (class)
 import Json.Decode as D
-import Meal
-import Random
-import SearchableDropdown
 import Ports
+import Random
+import ViewMeal as Meal
 
 
 
@@ -18,36 +16,22 @@ import Ports
 
 type Msg
     = NoOp
-    | EventMsg Event.Msg
+    | EventMsg Ev.Msg
     | SaveMeal
     | MealMsg Meal.Msg
     | QueryAll
-
-
-
---| DataMsg DbMsg
--- type DbMsg
---     = MealTransform Meal.DbMsg
-
-
-type State
-    = RecordMeal Meal.Modal
-
-type alias DataState 
-    = { meals : List Meal.Meal }
+    | HydrationEvents (List TypeEvent)
 
 
 type alias Model =
-    { eventState : Event.Model
-    , mealModal : Meal.Modal
+    { eventState : Ev.Model
+    , meals : Meal.Model
     }
 
 
-type Event
-    = MealEvent Meal.Event String -- StreamId
-
 type TypeEvent
     = MealTypeEvent Meal.HydrationEvent
+
 
 
 -- MAIN
@@ -66,11 +50,13 @@ main =
 
 -- INIT, UPDATE, VIEW
 
+
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.batch [
-        Sub.map MealMsg Meal.addedIngredientsSub
-    ]
+subscriptions _ =
+    Sub.batch
+        [ Sub.map HydrationEvents (Ev.recieveEvents decodeEventList)
+        ]
+
 
 init : D.Value -> ( Model, Cmd Msg )
 init flags =
@@ -82,14 +68,14 @@ init flags =
                 |> Result.withDefault 42
 
         eventState =
-            Event.initialModel (Random.initialSeed seed)
+            Ev.initialModel (Random.initialSeed seed)
 
         ( mealModel, cmd_ ) =
-            Meal.initModal
+            Meal.init
 
         model =
             { eventState = eventState
-            , mealModal = mealModel
+            , meals = mealModel
             }
     in
     ( model, Cmd.map MealMsg cmd_ )
@@ -104,7 +90,7 @@ update msg model =
         EventMsg subMsg ->
             let
                 ( updatedEventState, cmd ) =
-                    Event.update (\_ -> NoOp) (Debug.log "Event update" subMsg) model.eventState
+                    Ev.update (\_ -> NoOp) (Debug.log "Event update" subMsg) model.eventState
             in
             ( { model | eventState = updatedEventState }, cmd )
 
@@ -114,38 +100,58 @@ update msg model =
         MealMsg subMsg ->
             let
                 ( updatedMealModal, cmd ) =
-                    Meal.updateMeal
-                        (Cmd.map MealMsg)
-                        subMsg
-                        model.mealModal
+                    Meal.update
+                        (Debug.log "Sending ViewMealMsg" subMsg)
+                        model.meals
             in
-            ( { model | mealModal = updatedMealModal }, cmd )
-        
+            ( { model | meals = updatedMealModal }, Cmd.map MealMsg cmd )
+
         QueryAll ->
-            ( model, Cmd.batch [Ports.queryAllEvents (), Ports.queryStreamEvents ""] )
+            ( model, Cmd.batch [ Ports.queryAllEvents (), Ports.queryStreamEvents "" ] )
+
+        HydrationEvents typeEvents ->
+            ( List.foldl applyTypeEvent model typeEvents, Cmd.none )
 
 
 view : Model -> Html Msg
 view model =
     main_ [ class "container-fluid" ]
         [ title
-        , Meal.viewMealModal model.mealModal |> Html.map MealMsg
+        , Meal.view model.meals |> Html.map MealMsg
         ]
 
 
 
 -- HELPERS
 
+
 title : Html msg
 title =
     h1 [] [ text "FlexFoodLog" ]
 
-initialState : DataState
-initialState =
-    { meals = [] }
 
-applyTypeEvent : TypeEvent -> DataState -> DataState
-applyTypeEvent typeEvent state =
+decodeEvent : Ev.RecievedEnvelope -> List TypeEvent
+decodeEvent env =
+    let
+        parserConstrucors =
+            [ ( Meal.parseMealEvent, MealTypeEvent )
+            ]
+    in
+    parserConstrucors
+        |> List.map (\( parser, constructor ) -> parser >> Maybe.map constructor)
+        |> List.filterMap (\f -> f env)
+
+
+decodeEventList : Result D.Error (List Ev.RecievedEnvelope) -> List TypeEvent
+decodeEventList result =
+    result
+        |> Result.withDefault []
+        |> List.concatMap
+            decodeEvent
+
+
+applyTypeEvent : TypeEvent -> Model -> Model
+applyTypeEvent typeEvent model =
     case typeEvent of
         MealTypeEvent mealEvent ->
-            Meal.applyMealEventList mealEvent state.meals |> (\meals -> { state | meals = meals })
+            Meal.applyMealEventList mealEvent model.meals |> (\meals -> { model | meals = meals })

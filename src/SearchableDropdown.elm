@@ -26,6 +26,7 @@ init items =
     , items = items
     }
 
+
 setItems : List String -> Model -> Model
 setItems items model =
     { model | items = items }
@@ -38,29 +39,13 @@ setItems items model =
 type Msg
     = ToggleDropdown
     | SearchChanged String
-    | ToggleItem String
     | CloseDropdown
-    | KeyDown Int String
     | NoOp
 
 
-update : (List String -> List String -> Cmd m) -> Msg -> Model -> ( Model, Cmd m )
-update onUpdate msg model =
-    let
-        toggleItem item =
-            if List.member item model.selectedItems then
-                List.filter ((/=) item) model.selectedItems
-
-            else
-                item :: model.selectedItems
-
-        toggleUpdate item =
-            let
-                updatedSelected =
-                    toggleItem item
-            in
-            ( { model | selectedItems = updatedSelected, searchTerm = "" }, onUpdate (Debug.log "previous items" model.selectedItems) (Debug.log "new items" updatedSelected) )
-    in
+update :  Msg -> Model -> ( Model, Cmd m )
+update msg model =
+    
     case msg of
         ToggleDropdown ->
             ( { model | isOpen = not model.isOpen }, Cmd.none )
@@ -68,21 +53,6 @@ update onUpdate msg model =
         SearchChanged term ->
             ( { model | searchTerm = term, isOpen = True }, Cmd.none )
 
-        ToggleItem item ->
-            toggleUpdate item
-
-        KeyDown kc term ->
-            case kc of
-                13 ->
-                    -- KeyCode Enter
-                    toggleUpdate <| Debug.log "Enter on: " term
-
-                27 ->
-                    -- KeyCode Escape
-                    ( { model | isOpen = False }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
 
         CloseDropdown ->
             ( { model | isOpen = False }, Cmd.none )
@@ -95,14 +65,14 @@ update onUpdate msg model =
 -- VIEW
 
 
-makeItem : String -> Bool -> Html Msg
-makeItem item isSelected =
+makeItem : (String -> Bool -> msg) -> String -> Bool -> Html msg
+makeItem toggleItem item isSelected =
     Html.li []
         [ Html.label []
             [ Html.input
                 [ Html.Attributes.type_ "checkbox"
                 , Html.Attributes.checked isSelected
-                , Html.Events.onClick (ToggleItem item)
+                , Html.Events.onClick (toggleItem item isSelected)
                 ]
                 []
             , Html.text item
@@ -110,8 +80,8 @@ makeItem item isSelected =
         ]
 
 
-view : Model -> Html Msg
-view model =
+view : Model -> (Msg -> msg) -> (String -> msg) -> (String -> msg) -> Html msg
+view model mapParent addItem removeItem =
     let
         combinedItems =
             model.selectedItems ++ (model.items |> List.filter (\item -> not (List.member item model.selectedItems)))
@@ -133,36 +103,51 @@ view model =
             else
                 [ Html.Attributes.class "dropdown" ]
 
+        toggleItem item isSelected =
+            if isSelected then
+                removeItem item
+
+            else
+                addItem item
+
+        keyDecoder =
+            D.map
+                (\kc ->
+                    case kc of
+                        -- Enter
+                        13 ->
+                            ( toggleItem model.searchTerm (List.member model.searchTerm model.selectedItems), True )
+
+                        -- Escape
+                        27 ->
+                            ( mapParent CloseDropdown, True )
+
+                        -- Other keys
+                        _ ->
+                            ( mapParent NoOp, False )
+                )
+                Html.Events.keyCode
+
         search =
             Html.li []
                 [ Html.input
                     [ Html.Attributes.type_ "search"
                     , Html.Attributes.placeholder "Meal Item..."
                     , Html.Attributes.value model.searchTerm
-                    , Html.Events.onInput SearchChanged
-                    , Html.Events.preventDefaultOn "keydown" <|
-                        D.map
-                            (\kc ->
-                                case kc of
-                                    -- Enter
-                                    13 ->
-                                        ( ToggleItem model.searchTerm, True )
-
-                                    -- Escape
-                                    27 ->
-                                        ( CloseDropdown, True )
-
-                                    -- Other keys
-                                    _ ->
-                                        ( NoOp, False )
-                            )
-                            Html.Events.keyCode
+                    , Html.Events.onInput <| mapParent << SearchChanged
+                    , Html.Events.preventDefaultOn "keydown" keyDecoder
                     ]
                     []
                 ]
+
+        isContained item =
+            String.contains (String.toLower model.searchTerm) (String.toLower item)
+
+        makeCheckedItem item =
+            makeItem toggleItem item (List.member item model.selectedItems)
     in
     details detailsOpen
-        [ summary [ Html.Events.onClick ToggleDropdown ]
+        [ summary [ Html.Events.onClick <| mapParent ToggleDropdown ]
             [ Html.text
                 (if List.isEmpty model.selectedItems then
                     "Select items"
@@ -173,8 +158,9 @@ view model =
             ]
         , Html.ul []
             (search
-                :: (List.filter (\item -> String.contains (String.toLower model.searchTerm) (String.toLower item)) allItems
-                        |> List.map (\item -> makeItem item (List.member item model.selectedItems))
+                :: (allItems
+                        |> List.filter isContained
+                        |> List.map makeCheckedItem
                    )
             )
         ]
