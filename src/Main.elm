@@ -99,12 +99,17 @@ update msg model =
 
         MealMsg subMsg ->
             let
-                ( updatedMealModal, cmd ) =
+                ( updatedMealModal, cmd, evCmd ) =
                     Meal.update
                         (Debug.log "Sending ViewMealMsg" subMsg)
                         model.meals
             in
-            ( { model | meals = updatedMealModal }, Cmd.map MealMsg cmd )
+            ( { model | meals = updatedMealModal }
+            , Cmd.batch
+                [ Cmd.map EventMsg evCmd
+                , Cmd.map MealMsg cmd
+                ]
+            )
 
         QueryAll ->
             ( model, Cmd.batch [ Ports.queryAllEvents (), Ports.queryStreamEvents "" ] )

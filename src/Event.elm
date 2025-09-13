@@ -10,7 +10,6 @@ port module Event exposing
     , decodePersistenceError
     , decodePersistenceResult
     , decodeRecievedEnvelope
-    , fillEnvelope
     , hydrateStream
     , initialModel
     , persist
@@ -217,7 +216,7 @@ update onResponse msg model =
                     }
 
                 cmd =
-                    persistEventCmd (encodeEnvelope envelope)
+                    persistEventCmd <| Debug.log "persisting:" <| encodeEnvelope envelope
             in
             ( { model | seed = newSeed }, Cmd.map onResponse cmd )
 
@@ -290,9 +289,6 @@ persistNew newStreamData =
     Task.perform (\now -> InternalPersistNewRequest now newStreamData) Time.now
 
 
-fillEnvelope : EventData -> Cmd Msg
-fillEnvelope eventData =
-    Task.perform (\now -> InternalPersistRequest now eventData) Time.now
 
 
 

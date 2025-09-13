@@ -66,6 +66,7 @@ init =
     , Cmd.none
     )
 
+
 emptyMeal : Meal
 emptyMeal =
     { streamId = ""
@@ -76,12 +77,11 @@ emptyMeal =
     }
 
 
-
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Cmd Ev.Msg )
 update msg model =
     case msg of
         NoOp ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Cmd.none )
 
         OpenDialog meal ->
             let
@@ -93,6 +93,7 @@ update msg model =
             in
             ( { model | dialog = Open editModel }
             , Cmd.map EditMealMsg cmd
+            , Cmd.none
             )
 
         OpenNewMealDialog ->
@@ -105,25 +106,28 @@ update msg model =
             in
             ( { model | dialog = Open editModel }
             , Cmd.map EditMealMsg cmd
+            , Cmd.none
             )
 
         CloseDialog ->
             ( { model | dialog = Closed }
+            , Cmd.none
             , Cmd.none
             )
 
         EditMealMsg emsg ->
             case model.dialog of
                 Closed ->
-                    ( model, Cmd.none )
+                    ( model, Cmd.none, Cmd.none )
 
                 Open emodel ->
                     let
-                        ( updatedEmodel, cmd ) =
+                        ( updatedEmodel, cmd, evCmd ) =
                             EM.update emsg emodel
                     in
                     ( { model | dialog = Open updatedEmodel }
                     , Cmd.map EditMealMsg cmd
+                    , evCmd
                     )
 
 

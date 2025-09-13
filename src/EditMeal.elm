@@ -156,7 +156,7 @@ dialog attrs nodes =
 -- UPDATE
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update :  Msg -> Model -> ( Model, Cmd Msg, Cmd Ev.Msg )
 update msg model =
     case msg of
         DropdownMsg subMsg ->
@@ -164,19 +164,19 @@ update msg model =
                 ( updatedDropdown, cmd ) =
                     SD.update subMsg model.ingredients
             in
-            ( { model | ingredients = updatedDropdown }, cmd )
+            ( { model | ingredients = updatedDropdown }, cmd, Cmd.none )
 
         MakeEvent event ->
             persistMealEvent (InteractionMealEvent event model.streamId) model
 
         NoteChanged notes ->
-            ( { model | notes = notes }, Cmd.none )
+            ( { model | notes = notes }, Cmd.none, Cmd.none )
 
         DateTimeChanged datetime ->
-            ( { model | datetime = datetime }, Cmd.none )
+            ( { model | datetime = datetime }, Cmd.none, Cmd.none )
 
         NoOp ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Cmd.none )
 
 
 
@@ -210,7 +210,7 @@ encodeMealEvent ev =
             ( "MealDeleted", E.null )
 
 
-persistMealEvent : InteractionEvent -> Model -> ( Model, Cmd Msg )
+persistMealEvent : InteractionEvent -> Model -> ( Model, Cmd Msg, Cmd Ev.Msg )
 persistMealEvent mealEvent meal =
     case mealEvent of
         InteractionMealEvent ev streamId ->
@@ -228,10 +228,10 @@ persistMealEvent mealEvent meal =
                     , causationId = causationId
                     }
             in
-            ( applyPersistingEvent ev meal, Ev.persist eventData |> Cmd.map (\_ -> NoOp) )
+            ( applyPersistingEvent ev meal, Cmd.none, Ev.persist eventData )
 
         AssignedMealId newStreamId ->
-            ( { meal | streamId = newStreamId }, Cmd.none )
+            ( { meal | streamId = newStreamId }, Cmd.none, Cmd.none )
 
 applyPersistingEvent : Event -> Model -> Model
 applyPersistingEvent ev model =
