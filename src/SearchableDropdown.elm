@@ -128,7 +128,7 @@ view model mapParent add remove =
                     case kc of
                         -- Enter
                         13 ->
-                            Debug.log "Enter pressed results in Event: " ( toggleItem model.searchTerm (List.member model.searchTerm model.selectedItems), True )
+                           ( toggleItem model.searchTerm (List.member model.searchTerm model.selectedItems), True )
 
                         -- Escape
                         27 ->

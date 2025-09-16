@@ -4,6 +4,7 @@ module ViewMeal exposing
     , Model
     , Msg
     , applyMealEventList
+    , applyPersistanceResult
     , init
     , parseMealEvent
     , update
@@ -15,6 +16,7 @@ import Event as Ev
 import Html exposing (..)
 import Html.Events exposing (onClick)
 import Json.Decode as D
+import Json.Encode as E
 
 
 type alias Model =
@@ -70,7 +72,7 @@ init =
 emptyMeal : Meal
 emptyMeal =
     { streamId = ""
-    , streamPosition = 0
+    , streamPosition = 1
     , ingredients = []
     , datetime = ""
     , notes = ""
@@ -101,12 +103,12 @@ update msg model =
                 ingredients =
                     List.concatMap (\m -> m.ingredients) model.meals
 
-                ( editModel, cmd ) =
+                ( editModel, cmd, evCmd ) =
                     EM.init ingredients
             in
             ( { model | dialog = Open editModel }
             , Cmd.map EditMealMsg cmd
-            , Cmd.none
+            , evCmd
             )
 
         CloseDialog ->
@@ -136,7 +138,7 @@ view model =
     div []
         [ h1 [] [ text "Meals" ]
         , button [ onClick OpenNewMealDialog ] [ text "Add Meal" ]
-        , ul [] (List.map viewMeal model.meals)
+        , ul [] (List.map viewMeal <| Debug.log "meals" model.meals)
         , case model.dialog of
             Closed ->
                 text ""
@@ -156,27 +158,28 @@ viewMeal meal =
         ]
 
 
-parseMealEvent : Ev.RecievedEnvelope -> Maybe HydrationEvent
+parseMealEvent : Ev.Envelope -> Maybe HydrationEvent
 parseMealEvent envelope =
     envelope.payload
-        |> D.decodeValue (decodeMealEvent envelope.type_)
+        |> D.decodeValue (decodeMealEvent envelope.type_ envelope.streamId)
+        |> Debug.log "Decoded Meal Event" -- ("Decoded Meal Event" ++ envelope.streamId ++ ": " ++ (E.encode 4 envelope.payload))
         |> Result.toMaybe
 
 
-decodeMealEvent : String -> D.Decoder HydrationEvent
-decodeMealEvent type_ =
+decodeMealEvent : String -> String -> D.Decoder HydrationEvent
+decodeMealEvent type_ streamId =
     let
         mapMealEvent decoder =
-            D.map2 HydrationEvent decoder (D.field "streamId" D.string)
+            D.map2 HydrationEvent decoder (D.succeed streamId)
     in
     case type_ of
         "IngredientAdded" ->
             mapMealEvent
-                (D.map IngredientAdded (D.field "name" D.string))
+                (D.map IngredientAdded (D.field "ingredient" D.string))
 
         "IngredientRemoved" ->
             mapMealEvent
-                (D.map IngredientRemoved (D.field "name" D.string))
+                (D.map IngredientRemoved (D.field "ingredient" D.string))
 
         "MealCreated" ->
             mapMealEvent <| D.succeed MealCreated
@@ -192,6 +195,9 @@ decodeMealEvent type_ =
         "MealDeleted" ->
             mapMealEvent <|
                 D.succeed MealDeleted
+
+        "CreateMeal" ->
+            mapMealEvent <| D.succeed MealCreated
 
         _ ->
             D.fail ("Unknown event type: " ++ type_)
@@ -252,3 +258,18 @@ applyEvent ev maybeMeal =
 
         ( _, Nothing ) ->
             Nothing
+
+
+applyPersistanceResult : HydrationEvent -> Model -> Model
+applyPersistanceResult events model =
+    let
+        newModel =
+            applyMealEventList events model
+    in
+    case ( events, model.dialog ) of
+        ( HydrationEvent MealCreated streamId, Open dialog ) ->
+            -- When a meal is created, we need to set its streamId and streamPosition
+            { newModel | dialog = Open <| EM.applyPersistanceResult (EM.AssignedMealId streamId) dialog }
+
+        _ ->
+            newModel

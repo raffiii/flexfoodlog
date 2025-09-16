@@ -21,6 +21,7 @@ type Msg
     | MealMsg Meal.Msg
     | QueryAll
     | HydrationEvents (List TypeEvent)
+    | PersistanceResult (List TypeEvent)
 
 
 type alias Model =
@@ -30,7 +31,8 @@ type alias Model =
 
 
 type TypeEvent
-    = MealTypeEvent Meal.HydrationEvent
+    = None
+    | MealTypeEvent Meal.HydrationEvent
 
 
 
@@ -55,6 +57,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ Sub.map HydrationEvents (Ev.recieveEvents decodeEventList)
+        , Sub.map PersistanceResult (Ev.recievePersistenceResults (\result -> result |> Result.map decodeEvent |> Result.withDefault []))
         ]
 
 
@@ -70,27 +73,43 @@ init flags =
         eventState =
             Ev.initialModel (Random.initialSeed seed)
 
-        ( mealModel, cmd_ ) =
+        ( mealModel, mealInitCmd ) =
             Meal.init
 
         model =
             { eventState = eventState
             , meals = mealModel
             }
+
+        initCmd =
+            Cmd.batch
+                [ Cmd.map MealMsg mealInitCmd
+                , Cmd.map HydrationEvents Ev.hydrateAllStreams
+                ]
     in
-    ( model, Cmd.map MealMsg cmd_ )
+    ( model, initCmd )
+
+
+mapPersistanceResult : Result Ev.PersistenceError Ev.Envelope -> Msg
+mapPersistanceResult result =
+    case result of
+        Ok envelope ->
+            PersistanceResult (decodeEvent envelope)
+
+        Err _ ->
+            NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
+    case Debug.log "Main msg" msg of
         NoOp ->
             ( model, Cmd.none )
 
         EventMsg subMsg ->
             let
                 ( updatedEventState, cmd ) =
-                    Ev.update (\_ -> NoOp) (Debug.log "Event update" subMsg) model.eventState
+                    Ev.update mapPersistanceResult subMsg model.eventState
             in
             ( { model | eventState = updatedEventState }, cmd )
 
@@ -101,7 +120,7 @@ update msg model =
             let
                 ( updatedMealModal, cmd, evCmd ) =
                     Meal.update
-                        (Debug.log "Sending ViewMealMsg" subMsg)
+                        subMsg
                         model.meals
             in
             ( { model | meals = updatedMealModal }
@@ -114,8 +133,11 @@ update msg model =
         QueryAll ->
             ( model, Cmd.batch [ Ports.queryAllEvents (), Ports.queryStreamEvents "" ] )
 
+        PersistanceResult typeEvents ->
+            ( List.foldl applyPersistanceResult model typeEvents, Cmd.none )
+
         HydrationEvents typeEvents ->
-            ( List.foldl applyTypeEvent model typeEvents, Cmd.none )
+            ( List.foldl applyTypeEvent model (Debug.log "typeEvents" typeEvents), Cmd.none )
 
 
 view : Model -> Html Msg
@@ -135,7 +157,7 @@ title =
     h1 [] [ text "FlexFoodLog" ]
 
 
-decodeEvent : Ev.RecievedEnvelope -> List TypeEvent
+decodeEvent : Ev.Envelope -> List TypeEvent
 decodeEvent env =
     let
         parserConstrucors =
@@ -144,12 +166,13 @@ decodeEvent env =
     in
     parserConstrucors
         |> List.map (\( parser, constructor ) -> parser >> Maybe.map constructor)
-        |> List.filterMap (\f -> f env)
+        |> List.filterMap (\f -> Debug.log "Decoded Event:" <| f env)
 
 
-decodeEventList : Result D.Error (List Ev.RecievedEnvelope) -> List TypeEvent
+decodeEventList : Result D.Error (List Ev.Envelope) -> List TypeEvent
 decodeEventList result =
     result
+        |> Debug.log "Decoded Event List:"
         |> Result.withDefault []
         |> List.concatMap
             decodeEvent
@@ -157,6 +180,19 @@ decodeEventList result =
 
 applyTypeEvent : TypeEvent -> Model -> Model
 applyTypeEvent typeEvent model =
-    case typeEvent of
+    case Debug.log "" typeEvent of
         MealTypeEvent mealEvent ->
             Meal.applyMealEventList mealEvent model.meals |> (\meals -> { model | meals = meals })
+
+        None ->
+            model
+
+
+applyPersistanceResult : TypeEvent -> Model -> Model
+applyPersistanceResult typeEvent model =
+    case typeEvent of
+        MealTypeEvent mealEvent ->
+            Meal.applyPersistanceResult mealEvent model.meals |> (\meals -> { model | meals = meals })
+
+        None ->
+            model

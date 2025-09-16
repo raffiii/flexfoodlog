@@ -5,12 +5,11 @@ port module Event exposing
     , Msg
     , NewStreamEventData
     , PersistenceError(..)
-    , RecievedEnvelope
     , decodeEnvelope
     , decodePersistenceError
     , decodePersistenceResult
-    , decodeRecievedEnvelope
     , hydrateStream
+    , hydrateAllStreams
     , initialModel
     , persist
     , persistNew
@@ -69,7 +68,7 @@ port persistNewEventCmd : E.Value -> Cmd msg
 
 {-| Port to send a stream ID to JavaScript to request all events for that stream.
 -}
-port hydrateStreamCmd : String -> Cmd msg
+port hydrateStreamCmd : E.Value -> Cmd msg
 
 
 {-| Port to receive a list of hydrated events from JavaScript. This is typically
@@ -120,20 +119,6 @@ type alias Envelope =
     , correlationId : String
     , causationId : String
     }
-
-
-type alias RecievedEnvelope =
-    { eventId : String
-    , streamId : String
-    , streamPosition : Int
-    , timestamp : Int
-    , schemaVersion : Int
-    , type_ : String
-    , payload : D.Value
-    , correlationId : String
-    , causationId : String
-    }
-
 
 {-| The data a caller must provide to persist an event to an _existing_ stream.
 -}
@@ -216,7 +201,7 @@ update onResponse msg model =
                     }
 
                 cmd =
-                    persistEventCmd <| Debug.log "persisting:" <| encodeEnvelope envelope
+                    persistEventCmd <| encodeEnvelope envelope
             in
             ( { model | seed = newSeed }, Cmd.map onResponse cmd )
 
@@ -263,7 +248,13 @@ database. The result will be sent to the `eventsSubscription`.
 -}
 hydrateStream : String -> Cmd msg
 hydrateStream streamId =
-    hydrateStreamCmd streamId
+    hydrateStreamCmd (E.object [ ( "streamId", E.string streamId ) ])
+
+{-| 
+-}
+hydrateAllStreams : Cmd msg
+hydrateAllStreams =
+    hydrateStreamCmd (E.object [])
 
 
 {-| Creates a command to persist an event to an _existing_ stream.
@@ -312,20 +303,6 @@ encodeEnvelope envelope =
         ]
 
 
-decodeRecievedEnvelope : D.Decoder (List RecievedEnvelope)
-decodeRecievedEnvelope =
-    D.list
-        (D.succeed RecievedEnvelope
-            |> P.required "eventId" D.string
-            |> P.required "streamId" D.string
-            |> P.required "streamPosition" D.int
-            |> P.required "timestamp" D.int
-            |> P.required "schemaVersion" D.int
-            |> P.required "type_" D.string
-            |> P.required "payload" D.value
-            |> P.required "correlationId" D.string
-            |> P.required "causationId" D.string
-        )
 
 
 decodeEnvelope : D.Decoder Envelope
@@ -385,9 +362,9 @@ decodePersistenceResult valueDecoder =
 --==============================================================================
 
 
-recieveEvents : (Result D.Error (List RecievedEnvelope) -> msg) -> Sub msg
+recieveEvents : (Result D.Error (List Envelope) -> msg) -> Sub msg
 recieveEvents toMsg =
-    eventsSubscription (D.decodeValue decodeRecievedEnvelope >> toMsg)
+    eventsSubscription  (D.decodeValue (D.list decodeEnvelope) >> toMsg)
 
 
 recievePersistenceResults : (Result PersistenceError Envelope -> msg) -> Sub msg

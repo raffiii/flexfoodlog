@@ -1,4 +1,4 @@
-module EditMeal exposing (Model, Msg, empty, init, initWithMeal, update, view)
+module EditMeal exposing (Model, Msg, InteractionEvent(..), init, initWithMeal, update, view,applyPersistanceResult)
 
 import Event as Ev
 import Html exposing (..)
@@ -12,7 +12,7 @@ import SearchableDropdown as SD
 -- Model
 
 
-type alias Model =
+type alias Meal =
     { streamId : String
     , streamPosition : Int
     , ingredients : SD.Model
@@ -21,13 +21,17 @@ type alias Model =
     }
 
 
+type Model
+    = Creating (List String)
+    | Existing Meal
+
+
 
 -- MESSAGES
 
 
 type Msg
-    = NoOp
-    | DropdownMsg SD.Msg
+    = DropdownMsg SD.Msg
     | NoteChanged String
     | DateTimeChanged String
     | MakeEvent Event
@@ -64,17 +68,7 @@ causationId =
 -- INIT
 
 
-empty : List String -> Model
-empty ingredientsList =
-    { streamId = ""
-    , streamPosition = 0
-    , ingredients = SD.init ingredientsList
-    , datetime = ""
-    , notes = ""
-    }
-
-
-init : List String -> ( Model, Cmd Msg )
+init : List String -> ( Model, Cmd Msg, Cmd Ev.Msg )
 init ingredientsList =
     let
         eventData =
@@ -86,9 +80,25 @@ init ingredientsList =
             , causationId = causationId
             }
     in
-    ( empty ingredientsList
-    , Ev.persistNew eventData |> Cmd.map (\_ -> NoOp)
+    ( Creating ingredientsList
+    , Cmd.none
+    , Ev.persistNew eventData
     )
+
+applyPersistanceResult : InteractionEvent -> Model -> Model
+applyPersistanceResult event model =
+    case ( event, model ) of
+        ( AssignedMealId streamId, Creating ingredientsList ) ->
+            Existing
+                { streamId = streamId
+                , streamPosition = 1
+                , ingredients = SD.init ingredientsList
+                , datetime = ""
+                , notes = ""
+                }
+
+        _ ->
+            model 
 
 
 initWithMeal :
@@ -101,7 +111,7 @@ initWithMeal :
     -> List String
     -> ( Model, Cmd Msg )
 initWithMeal meal ingredientsList =
-    ( Model meal.streamId meal.streamPosition (SD.init ingredientsList |> SD.setItems meal.ingredients) meal.datetime meal.notes, Cmd.none )
+    ( Existing <| Meal meal.streamId meal.streamPosition (SD.init ingredientsList |> SD.setItems meal.ingredients) meal.datetime meal.notes, Cmd.none )
 
 
 
@@ -110,18 +120,28 @@ initWithMeal meal ingredientsList =
 
 view : Model -> (Msg -> msg) -> msg -> Html msg
 view modal mapMsg onClose =
+    let
+        content =
+            case modal of
+                Creating _ ->
+                    text "Creating new meal..."
+
+                Existing meal ->
+                    viewForm meal
+    in
+    
     dialog [ Attr.attribute "open" "" ]
         [ article []
             [ header []
                 [ button [ Attr.attribute "aria-label" "Close", Attr.rel "prev", onClick onClose ] []
                 , p [] [ strong [] [ text "Edit Meal" ] ]
                 ]
-            , Html.map mapMsg <| viewForm modal
+            , Html.map mapMsg content
             ]
         ]
 
 
-viewForm : Model -> Html Msg
+viewForm : Meal -> Html Msg
 viewForm modal =
     p []
         [ SD.view modal.ingredients DropdownMsg (MakeEvent << IngredientAdded) (MakeEvent << IngredientRemoved)
@@ -156,26 +176,31 @@ dialog attrs nodes =
 -- UPDATE
 
 
-update :  Msg -> Model -> ( Model, Cmd Msg, Cmd Ev.Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Cmd Ev.Msg )
 update msg model =
-    case msg of
-        DropdownMsg subMsg ->
+    case ( msg, model ) of
+        ( DropdownMsg subMsg, Existing meal ) ->
             let
                 ( updatedDropdown, cmd ) =
-                    SD.update subMsg model.ingredients
+                    SD.update subMsg meal.ingredients
             in
-            ( { model | ingredients = updatedDropdown }, cmd, Cmd.none )
+            ( Existing { meal | ingredients = updatedDropdown }, cmd, Cmd.none )
 
-        MakeEvent event ->
-            persistMealEvent (InteractionMealEvent event model.streamId) model
+        ( MakeEvent event, Existing meal ) ->
+            let
+                ( newMeal, cmd, evCmd ) =
+                    persistMealEvent (InteractionMealEvent event meal.streamId) meal
+            in
+            ( Existing {newMeal| streamPosition = meal.streamPosition + 1 }, cmd, evCmd )
 
-        NoteChanged notes ->
-            ( { model | notes = notes }, Cmd.none, Cmd.none )
+        ( NoteChanged notes, Existing meal ) ->
+            ( Existing { meal | notes = notes }, Cmd.none, Cmd.none )
 
-        DateTimeChanged datetime ->
-            ( { model | datetime = datetime }, Cmd.none, Cmd.none )
+        ( DateTimeChanged datetime, Existing meal ) ->
+            ( Existing { meal | datetime = datetime }, Cmd.none, Cmd.none )
 
-        NoOp ->
+
+        _ ->
             ( model, Cmd.none, Cmd.none )
 
 
@@ -210,7 +235,7 @@ encodeMealEvent ev =
             ( "MealDeleted", E.null )
 
 
-persistMealEvent : InteractionEvent -> Model -> ( Model, Cmd Msg, Cmd Ev.Msg )
+persistMealEvent : InteractionEvent -> Meal -> ( Meal, Cmd Msg, Cmd Ev.Msg )
 persistMealEvent mealEvent meal =
     case mealEvent of
         InteractionMealEvent ev streamId ->
@@ -220,7 +245,7 @@ persistMealEvent mealEvent meal =
 
                 eventData =
                     { streamId = streamId
-                    , expectedStreamPosition = meal.streamPosition + 1
+                    , expectedStreamPosition = Debug.log "expected new stream position:" meal.streamPosition + 1
                     , type_ = eventType
                     , schemaVersion = 1
                     , payload = payload
@@ -231,9 +256,10 @@ persistMealEvent mealEvent meal =
             ( applyPersistingEvent ev meal, Cmd.none, Ev.persist eventData )
 
         AssignedMealId newStreamId ->
-            ( { meal | streamId = newStreamId }, Cmd.none, Cmd.none )
+            ( { meal | streamId = newStreamId}, Cmd.none, Cmd.none )
 
-applyPersistingEvent : Event -> Model -> Model
+
+applyPersistingEvent : Event -> Meal -> Meal
 applyPersistingEvent ev model =
     case ev of
         IngredientAdded ingredient ->

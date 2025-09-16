@@ -96,11 +96,13 @@ function setupPersistence(elmApp) {
     //  PORT: hydrateStreamCmd (for loading a stream)
     // ============================================================================
     if (elmApp.ports.hydrateStreamCmd) {
-      elmApp.ports.hydrateStreamCmd.subscribe((streamId) => {
+      elmApp.ports.hydrateStreamCmd.subscribe((info) => {
         if (!db) {
           console.error("hydrateStreamCmd: Database not initialized.");
           return;
         }
+        console.log("hydrateStreamCmd received info:", info);
+        const { streamId } = info;
         const tx = db.transaction(EVENTS_STORE, "readonly");
         const store = tx.objectStore(EVENTS_STORE);
         const index = store.index("streamId_idx");
