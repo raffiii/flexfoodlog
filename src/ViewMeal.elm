@@ -16,7 +16,6 @@ import Event as Ev
 import Html exposing (..)
 import Html.Events exposing (onClick)
 import Json.Decode as D
-import Json.Encode as E
 
 
 type alias Model =
