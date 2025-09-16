@@ -6362,11 +6362,11 @@ var $author$project$EditMeal$Meal = F5(
 	function (streamId, streamPosition, ingredients, datetime, notes) {
 		return {datetime: datetime, ingredients: ingredients, notes: notes, streamId: streamId, streamPosition: streamPosition};
 	});
-var $author$project$SearchableDropdown$setItems = F2(
+var $author$project$SearchableDropdown$setSelectedItems = F2(
 	function (items, model) {
 		return _Utils_update(
 			model,
-			{items: items});
+			{selectedItems: items});
 	});
 var $author$project$EditMeal$initWithMeal = F2(
 	function (meal, ingredientsList) {
@@ -6377,7 +6377,7 @@ var $author$project$EditMeal$initWithMeal = F2(
 					meal.streamId,
 					meal.streamPosition,
 					A2(
-						$author$project$SearchableDropdown$setItems,
+						$author$project$SearchableDropdown$setSelectedItems,
 						meal.ingredients,
 						$author$project$SearchableDropdown$init(ingredientsList)),
 					meal.datetime,

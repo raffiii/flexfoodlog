@@ -111,7 +111,7 @@ initWithMeal :
     -> List String
     -> ( Model, Cmd Msg )
 initWithMeal meal ingredientsList =
-    ( Existing <| Meal meal.streamId meal.streamPosition (SD.init ingredientsList |> SD.setItems meal.ingredients) meal.datetime meal.notes, Cmd.none )
+    ( Existing <| Meal meal.streamId meal.streamPosition (SD.init ingredientsList |> SD.setSelectedItems meal.ingredients) meal.datetime meal.notes, Cmd.none )
 
 
 
