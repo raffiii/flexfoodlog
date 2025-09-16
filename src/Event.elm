@@ -8,8 +8,8 @@ port module Event exposing
     , decodeEnvelope
     , decodePersistenceError
     , decodePersistenceResult
-    , hydrateStream
     , hydrateAllStreams
+    , hydrateStream
     , initialModel
     , persist
     , persistNew
@@ -119,6 +119,7 @@ type alias Envelope =
     , correlationId : String
     , causationId : String
     }
+
 
 {-| The data a caller must provide to persist an event to an _existing_ stream.
 -}
@@ -250,8 +251,8 @@ hydrateStream : String -> Cmd msg
 hydrateStream streamId =
     hydrateStreamCmd (E.object [ ( "streamId", E.string streamId ) ])
 
-{-| 
--}
+
+{-| -}
 hydrateAllStreams : Cmd msg
 hydrateAllStreams =
     hydrateStreamCmd (E.object [])
@@ -281,8 +282,6 @@ persistNew newStreamData =
 
 
 
-
-
 --==============================================================================
 -- JSON ENCODERS
 --==============================================================================
@@ -301,8 +300,6 @@ encodeEnvelope envelope =
         , ( "correlationId", E.string envelope.correlationId )
         , ( "causationId", E.string envelope.causationId )
         ]
-
-
 
 
 decodeEnvelope : D.Decoder Envelope
@@ -364,7 +361,12 @@ decodePersistenceResult valueDecoder =
 
 recieveEvents : (Result D.Error (List Envelope) -> msg) -> Sub msg
 recieveEvents toMsg =
-    eventsSubscription  (D.decodeValue (D.list decodeEnvelope) >> toMsg)
+    eventsSubscription
+        (D.decodeValue (D.list decodeEnvelope)
+            >> Result.map (List.sortBy .streamPosition)
+            >> toMsg
+        )
+
 
 
 recievePersistenceResults : (Result PersistenceError Envelope -> msg) -> Sub msg

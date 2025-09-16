@@ -102,7 +102,7 @@ mapPersistanceResult result =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case Debug.log "Main msg" msg of
+    case  msg of
         NoOp ->
             ( model, Cmd.none )
 
@@ -137,7 +137,7 @@ update msg model =
             ( List.foldl applyPersistanceResult model typeEvents, Cmd.none )
 
         HydrationEvents typeEvents ->
-            ( List.foldl applyTypeEvent model (Debug.log "typeEvents" typeEvents), Cmd.none )
+            ( List.foldl applyTypeEvent model typeEvents, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -166,13 +166,12 @@ decodeEvent env =
     in
     parserConstrucors
         |> List.map (\( parser, constructor ) -> parser >> Maybe.map constructor)
-        |> List.filterMap (\f -> Debug.log "Decoded Event:" <| f env)
+        |> List.filterMap (\f -> f env)
 
 
 decodeEventList : Result D.Error (List Ev.Envelope) -> List TypeEvent
 decodeEventList result =
     result
-        |> Debug.log "Decoded Event List:"
         |> Result.withDefault []
         |> List.concatMap
             decodeEvent
@@ -180,9 +179,11 @@ decodeEventList result =
 
 applyTypeEvent : TypeEvent -> Model -> Model
 applyTypeEvent typeEvent model =
-    case Debug.log "" typeEvent of
+    case typeEvent of
         MealTypeEvent mealEvent ->
-            Meal.applyMealEventList mealEvent model.meals |> (\meals -> { model | meals = meals })
+            model.meals
+                |> Meal.applyMealEventList mealEvent
+                |> (\meals -> { model | meals = meals })
 
         None ->
             model

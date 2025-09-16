@@ -245,7 +245,7 @@ persistMealEvent mealEvent meal =
 
                 eventData =
                     { streamId = streamId
-                    , expectedStreamPosition = Debug.log "expected new stream position:" meal.streamPosition + 1
+                    , expectedStreamPosition =  meal.streamPosition + 1
                     , type_ = eventType
                     , schemaVersion = 1
                     , payload = payload

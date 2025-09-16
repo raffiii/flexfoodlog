@@ -5360,7 +5360,6 @@ var $elm$core$List$filterMap = F2(
 			_List_Nil,
 			xs);
 	});
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Maybe$map = F2(
 	function (f, maybe) {
 		if (maybe.$ === 'Just') {
@@ -5474,12 +5473,9 @@ var $elm$core$Result$toMaybe = function (result) {
 var $author$project$ViewMeal$parseMealEvent = function (envelope) {
 	return $elm$core$Result$toMaybe(
 		A2(
-			$elm$core$Debug$log,
-			'Decoded Meal Event',
-			A2(
-				$elm$json$Json$Decode$decodeValue,
-				A2($author$project$ViewMeal$decodeMealEvent, envelope.type_, envelope.streamId),
-				envelope.payload)));
+			$elm$json$Json$Decode$decodeValue,
+			A2($author$project$ViewMeal$decodeMealEvent, envelope.type_, envelope.streamId),
+			envelope.payload));
 };
 var $author$project$Main$decodeEvent = function (env) {
 	var parserConstrucors = _List_fromArray(
@@ -5489,10 +5485,7 @@ var $author$project$Main$decodeEvent = function (env) {
 	return A2(
 		$elm$core$List$filterMap,
 		function (f) {
-			return A2(
-				$elm$core$Debug$log,
-				'Decoded Event:',
-				f(env));
+			return f(env);
 		},
 		A2(
 			$elm$core$List$map,
@@ -5526,10 +5519,7 @@ var $author$project$Main$decodeEventList = function (result) {
 	return A2(
 		$elm$core$List$concatMap,
 		$author$project$Main$decodeEvent,
-		A2(
-			$elm$core$Result$withDefault,
-			_List_Nil,
-			A2($elm$core$Debug$log, 'Decoded Event List:', result)));
+		A2($elm$core$Result$withDefault, _List_Nil, result));
 };
 var $elm$core$Platform$Sub$map = _Platform_map;
 var $elm$core$Result$map = F2(
@@ -5599,13 +5589,21 @@ var $author$project$Event$decodeEnvelope = A3(
 									$elm$json$Json$Decode$succeed($author$project$Event$Envelope))))))))));
 var $author$project$Event$eventsSubscription = _Platform_incomingPort('eventsSubscription', $elm$json$Json$Decode$value);
 var $elm$json$Json$Decode$list = _Json_decodeList;
+var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Event$recieveEvents = function (toMsg) {
 	return $author$project$Event$eventsSubscription(
 		A2(
 			$elm$core$Basics$composeR,
 			$elm$json$Json$Decode$decodeValue(
 				$elm$json$Json$Decode$list($author$project$Event$decodeEnvelope)),
-			toMsg));
+			A2(
+				$elm$core$Basics$composeR,
+				$elm$core$Result$map(
+					$elm$core$List$sortBy(
+						function ($) {
+							return $.streamPosition;
+						})),
+				toMsg)));
 };
 var $author$project$Event$DecodingError = {$: 'DecodingError'};
 var $elm$core$Basics$always = F2(
@@ -5734,10 +5732,14 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
+var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Basics$neq = _Utils_notEqual;
-var $author$project$ViewMeal$applyEvent = F2(
-	function (ev, maybeMeal) {
-		var _v0 = _Utils_Tuple2(ev, maybeMeal);
+var $author$project$ViewMeal$applyEvent = F3(
+	function (ev, maybeMeal, streamId) {
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'applying',
+			_Utils_Tuple2(ev, maybeMeal));
 		if (_v0.b.$ === 'Just') {
 			switch (_v0.a.$) {
 				case 'MealCreated':
@@ -5788,7 +5790,10 @@ var $author$project$ViewMeal$applyEvent = F2(
 			if (_v0.a.$ === 'MealCreated') {
 				var _v1 = _v0.a;
 				var _v2 = _v0.b;
-				return $elm$core$Maybe$Just($author$project$ViewMeal$emptyMeal);
+				return $elm$core$Maybe$Just(
+					_Utils_update(
+						$author$project$ViewMeal$emptyMeal,
+						{streamId: streamId}));
 			} else {
 				var _v5 = _v0.b;
 				return $elm$core$Maybe$Nothing;
@@ -5816,9 +5821,12 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 					return _Utils_eq(m.streamId, streamId);
 				},
 				meals));
-		var updatedMeal = A2($author$project$ViewMeal$applyEvent, ev, mealWithId);
+		var updatedMeal = A3($author$project$ViewMeal$applyEvent, ev, mealWithId, streamId);
 		var newMeals = function () {
-			var _v1 = _Utils_Tuple2(mealWithId, updatedMeal);
+			var _v1 = A2(
+				$elm$core$Debug$log,
+				'Old & updated meal for ev',
+				_Utils_Tuple3(mealWithId, updatedMeal, ev));
 			if (_v1.a.$ === 'Just') {
 				if (_v1.b.$ === 'Just') {
 					var updated = _v1.b.a;
@@ -5852,9 +5860,12 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 				}
 			}
 		}();
-		return _Utils_update(
-			model,
-			{meals: newMeals});
+		return A2(
+			$elm$core$Debug$log,
+			'Updated model',
+			_Utils_update(
+				model,
+				{meals: newMeals}));
 	});
 var $author$project$EditMeal$Existing = function (a) {
 	return {$: 'Existing', a: a};
@@ -5918,9 +5929,8 @@ var $author$project$Main$applyPersistanceResult = F2(
 	});
 var $author$project$Main$applyTypeEvent = F2(
 	function (typeEvent, model) {
-		var _v0 = A2($elm$core$Debug$log, '', typeEvent);
-		if (_v0.$ === 'MealTypeEvent') {
-			var mealEvent = _v0.a;
+		if (typeEvent.$ === 'MealTypeEvent') {
+			var mealEvent = typeEvent.a;
 			return function (meals) {
 				return _Utils_update(
 					model,
@@ -6549,15 +6559,7 @@ var $author$project$EditMeal$persistMealEvent = F2(
 			var _v1 = $author$project$EditMeal$encodeMealEvent(ev);
 			var eventType = _v1.a;
 			var payload = _v1.b;
-			var eventData = {
-				causationId: $author$project$EditMeal$causationId,
-				correlationId: $author$project$EditMeal$correlationId,
-				expectedStreamPosition: A2($elm$core$Debug$log, 'expected new stream position:', meal.streamPosition) + 1,
-				payload: payload,
-				schemaVersion: 1,
-				streamId: streamId,
-				type_: eventType
-			};
+			var eventData = {causationId: $author$project$EditMeal$causationId, correlationId: $author$project$EditMeal$correlationId, expectedStreamPosition: meal.streamPosition + 1, payload: payload, schemaVersion: 1, streamId: streamId, type_: eventType};
 			return _Utils_Tuple3(
 				A2($author$project$EditMeal$applyPersistingEvent, ev, meal),
 				$elm$core$Platform$Cmd$none,
@@ -6733,12 +6735,11 @@ var $author$project$ViewMeal$update = F2(
 	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		var _v0 = A2($elm$core$Debug$log, 'Main msg', msg);
-		switch (_v0.$) {
+		switch (msg.$) {
 			case 'NoOp':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'EventMsg':
-				var subMsg = _v0.a;
+				var subMsg = msg.a;
 				var _v1 = A3($author$project$Event$update, $author$project$Main$mapPersistanceResult, subMsg, model.eventState);
 				var updatedEventState = _v1.a;
 				var cmd = _v1.b;
@@ -6750,7 +6751,7 @@ var $author$project$Main$update = F2(
 			case 'SaveMeal':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'MealMsg':
-				var subMsg = _v0.a;
+				var subMsg = msg.a;
 				var _v2 = A2($author$project$ViewMeal$update, subMsg, model.meals);
 				var updatedMealModal = _v2.a;
 				var cmd = _v2.b;
@@ -6775,18 +6776,14 @@ var $author$project$Main$update = F2(
 								$author$project$Ports$queryStreamEvents('')
 							])));
 			case 'PersistanceResult':
-				var typeEvents = _v0.a;
+				var typeEvents = msg.a;
 				return _Utils_Tuple2(
 					A3($elm$core$List$foldl, $author$project$Main$applyPersistanceResult, model, typeEvents),
 					$elm$core$Platform$Cmd$none);
 			default:
-				var typeEvents = _v0.a;
+				var typeEvents = msg.a;
 				return _Utils_Tuple2(
-					A3(
-						$elm$core$List$foldl,
-						$author$project$Main$applyTypeEvent,
-						model,
-						A2($elm$core$Debug$log, 'typeEvents', typeEvents)),
+					A3($elm$core$List$foldl, $author$project$Main$applyTypeEvent, model, typeEvents),
 					$elm$core$Platform$Cmd$none);
 		}
 	});
@@ -7244,10 +7241,7 @@ var $author$project$ViewMeal$view = function (model) {
 				A2(
 				$elm$html$Html$ul,
 				_List_Nil,
-				A2(
-					$elm$core$List$map,
-					$author$project$ViewMeal$viewMeal,
-					A2($elm$core$Debug$log, 'meals', model.meals))),
+				A2($elm$core$List$map, $author$project$ViewMeal$viewMeal, model.meals)),
 				function () {
 				var _v0 = model.dialog;
 				if (_v0.$ === 'Closed') {

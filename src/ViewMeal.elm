@@ -137,7 +137,7 @@ view model =
     div []
         [ h1 [] [ text "Meals" ]
         , button [ onClick OpenNewMealDialog ] [ text "Add Meal" ]
-        , ul [] (List.map viewMeal <| Debug.log "meals" model.meals)
+        , ul [] (List.map viewMeal <| model.meals)
         , case model.dialog of
             Closed ->
                 text ""
@@ -161,7 +161,6 @@ parseMealEvent : Ev.Envelope -> Maybe HydrationEvent
 parseMealEvent envelope =
     envelope.payload
         |> D.decodeValue (decodeMealEvent envelope.type_ envelope.streamId)
-        |> Debug.log "Decoded Meal Event" -- ("Decoded Meal Event" ++ envelope.streamId ++ ": " ++ (E.encode 4 envelope.payload))
         |> Result.toMaybe
 
 
@@ -212,7 +211,7 @@ applyMealEventList (HydrationEvent ev streamId) model =
             List.filter (\m -> m.streamId == streamId) meals |> List.head
 
         updatedMeal =
-            applyEvent ev mealWithId
+            applyEvent ev mealWithId streamId
 
         newMeals =
             case ( mealWithId, updatedMeal ) of
@@ -231,11 +230,11 @@ applyMealEventList (HydrationEvent ev streamId) model =
     { model | meals = newMeals }
 
 
-applyEvent : Event -> Maybe Meal -> Maybe Meal
-applyEvent ev maybeMeal =
+applyEvent : Event -> Maybe Meal -> String -> Maybe Meal
+applyEvent ev maybeMeal streamId =
     case ( ev, maybeMeal ) of
         ( MealCreated, Nothing ) ->
-            Just emptyMeal
+            Just { emptyMeal | streamId = streamId }
 
         ( MealCreated, Just _ ) ->
             maybeMeal
