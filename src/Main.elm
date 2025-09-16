@@ -5,7 +5,6 @@ import Event as Ev
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Json.Decode as D
-import Ports
 import Random
 import ViewMeal as Meal
 
@@ -131,7 +130,7 @@ update msg model =
             )
 
         QueryAll ->
-            ( model, Cmd.batch [ Ports.queryAllEvents (), Ports.queryStreamEvents "" ] )
+            ( model, Cmd.none )
 
         PersistanceResult typeEvents ->
             ( List.foldl applyPersistanceResult model typeEvents, Cmd.none )

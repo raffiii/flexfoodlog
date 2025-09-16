@@ -5732,14 +5732,10 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Basics$neq = _Utils_notEqual;
 var $author$project$ViewMeal$applyEvent = F3(
 	function (ev, maybeMeal, streamId) {
-		var _v0 = A2(
-			$elm$core$Debug$log,
-			'applying',
-			_Utils_Tuple2(ev, maybeMeal));
+		var _v0 = _Utils_Tuple2(ev, maybeMeal);
 		if (_v0.b.$ === 'Just') {
 			switch (_v0.a.$) {
 				case 'MealCreated':
@@ -5823,10 +5819,7 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 				meals));
 		var updatedMeal = A3($author$project$ViewMeal$applyEvent, ev, mealWithId, streamId);
 		var newMeals = function () {
-			var _v1 = A2(
-				$elm$core$Debug$log,
-				'Old & updated meal for ev',
-				_Utils_Tuple3(mealWithId, updatedMeal, ev));
+			var _v1 = _Utils_Tuple2(mealWithId, updatedMeal);
 			if (_v1.a.$ === 'Just') {
 				if (_v1.b.$ === 'Just') {
 					var updated = _v1.b.a;
@@ -5860,12 +5853,9 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 				}
 			}
 		}();
-		return A2(
-			$elm$core$Debug$log,
-			'Updated model',
-			_Utils_update(
-				model,
-				{meals: newMeals}));
+		return _Utils_update(
+			model,
+			{meals: newMeals});
 	});
 var $author$project$EditMeal$Existing = function (a) {
 	return {$: 'Existing', a: a};
@@ -5951,19 +5941,12 @@ var $author$project$Main$mapPersistanceResult = function (result) {
 		return $author$project$Main$NoOp;
 	}
 };
-var $elm$json$Json$Encode$null = _Json_encodeNull;
-var $author$project$Ports$queryAllEvents = _Platform_outgoingPort(
-	'queryAllEvents',
-	function ($) {
-		return $elm$json$Json$Encode$null;
-	});
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $author$project$Ports$queryStreamEvents = _Platform_outgoingPort('queryStreamEvents', $elm$json$Json$Encode$string);
 var $elm$json$Json$Encode$int = _Json_wrap;
 var $elm$time$Time$posixToMillis = function (_v0) {
 	var millis = _v0.a;
 	return millis;
 };
+var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Event$encodeEnvelope = function (envelope) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -6489,6 +6472,7 @@ var $author$project$EditMeal$applyPersistingEvent = F2(
 				return model;
 		}
 	});
+var $elm$json$Json$Encode$null = _Json_encodeNull;
 var $author$project$EditMeal$encodeMealEvent = function (ev) {
 	switch (ev.$) {
 		case 'IngredientAdded':
@@ -6767,14 +6751,7 @@ var $author$project$Main$update = F2(
 								A2($elm$core$Platform$Cmd$map, $author$project$Main$MealMsg, cmd)
 							])));
 			case 'QueryAll':
-				return _Utils_Tuple2(
-					model,
-					$elm$core$Platform$Cmd$batch(
-						_List_fromArray(
-							[
-								$author$project$Ports$queryAllEvents(_Utils_Tuple0),
-								$author$project$Ports$queryStreamEvents('')
-							])));
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'PersistanceResult':
 				var typeEvents = msg.a;
 				return _Utils_Tuple2(
