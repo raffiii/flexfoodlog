@@ -8,7 +8,7 @@ Analytics views will be added as needed/found helpful, if you think another pres
 
 ## Goals:
 
-- [ ] Save meal details
+- [x] Save meal details
     - Food name
         - Dropdown for most common meals
     - Date & time
@@ -21,3 +21,6 @@ Analytics views will be added as needed/found helpful, if you think another pres
     - Severity (1-10)
 - [ ] Analytics
     - [ ] List view
+- [ ] Improve visual layout
+    - Clean table
+    - Text size on mobile
