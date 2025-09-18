@@ -365,6 +365,7 @@ recieveEvents toMsg =
         (D.decodeValue (D.list decodeEnvelope)
             >> Result.map (List.sortBy .streamPosition)
             >> toMsg
+            >> Debug.log "Received Events"
         )
 
 

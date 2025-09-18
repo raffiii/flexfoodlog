@@ -8,6 +8,7 @@ import Json.Decode as D
 import Random
 import ViewMeal as Meal
 import ViewSymptom as Symptom
+import Symbols
 
 
 
@@ -100,7 +101,7 @@ init flags =
 
 mapPersistanceResult : Result Ev.PersistenceError Ev.Envelope -> Msg
 mapPersistanceResult result =
-    case result of
+    case Debug.log "" result of
         Ok envelope ->
             PersistanceResult (decodeEvent envelope)
 

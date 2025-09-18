@@ -91,7 +91,7 @@ init categoriesList =
 
 applyPersistanceResult : InteractionEvent -> Model -> Model
 applyPersistanceResult event model =
-    case ( event, model ) of
+    case Debug.log "applying" ( event, model ) of
         ( AssignedSymptomId streamId, Creating categoriesList ) ->
             Existing <|
                 Symptom
@@ -159,7 +159,6 @@ viewForm : Symptom -> Html Msg
 viewForm modal =
     p []
         [ DS.view modal.category DropdownMsg (MakeEvent << CategoryChanged)
-
         , input
             [ Attr.type_ "datetime-local"
             , Attr.placeholder "Date"
@@ -188,6 +187,7 @@ viewSeverity severity =
             , Attr.max "10"
             , Html.Events.on "blur" (D.map (MakeEvent << SeverityUpdated << String.toInt << Debug.log "got int") (D.at [ "target", "value" ] D.string))
             ]
+
         slider =
             case severity of
                 Just s ->
@@ -196,7 +196,7 @@ viewSeverity severity =
                 Nothing ->
                     input attrs []
     in
-    Html.fieldset [Attr.attribute "role" "group"]
+    Html.fieldset [ Attr.attribute "role" "group" ]
         [ Html.label [] [ text "Severity (1-10)" ]
         , slider
         , case severity of
@@ -256,7 +256,7 @@ encodeSymptomEvent : Event -> ( String, E.Value )
 encodeSymptomEvent ev =
     case ev of
         CategoryChanged category ->
-            ( "CategoryChanged"
+            ( "CategoryUpdated"
             , E.object [ ( "category", E.string category ) ]
             )
 
@@ -326,3 +326,6 @@ applyPersistingEvent ev model =
 
         CategoryChanged category ->
             { model | category = DS.setSelectedItem (Just category) model.category }
+
+
+

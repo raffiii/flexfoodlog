@@ -14,9 +14,12 @@ module ViewMeal exposing
 import EditMeal as EM
 import Event as Ev
 import Html exposing (..)
+import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
 import Json.Decode as D
-import Html.Attributes exposing (class)
+import Json.Encode as E
+import Set
+import Symbols
 
 
 type alias Model =
@@ -43,6 +46,7 @@ type Msg
     = NoOp
     | OpenDialog Meal
     | OpenNewMealDialog
+    | DeleteMeal Meal
     | CloseDialog
     | EditMealMsg EM.Msg
 
@@ -58,6 +62,16 @@ type Event
 
 type HydrationEvent
     = HydrationEvent Event String Int -- StreamId, StreamPosition
+
+
+correlationId : String
+correlationId =
+    causationId
+
+
+causationId : String
+causationId =
+    "view-meal"
 
 
 init : ( Model, Cmd Msg )
@@ -88,7 +102,10 @@ update msg model =
         OpenDialog meal ->
             let
                 ingredients =
-                    List.concatMap (\m -> m.ingredients) model.meals
+                    model.meals
+                        |> List.concatMap (\m -> m.ingredients)
+                        |> Set.fromList
+                        |> Set.toList
 
                 ( editModel, cmd ) =
                     EM.initWithMeal meal ingredients
@@ -101,7 +118,10 @@ update msg model =
         OpenNewMealDialog ->
             let
                 ingredients =
-                    List.concatMap (\m -> m.ingredients) model.meals
+                    model.meals
+                        |> List.concatMap (\m -> m.ingredients)
+                        |> Set.fromList
+                        |> Set.toList
 
                 ( editModel, cmd, evCmd ) =
                     EM.init ingredients
@@ -115,6 +135,23 @@ update msg model =
             ( { model | dialog = Closed }
             , Cmd.none
             , Cmd.none
+            )
+
+        DeleteMeal meal ->
+            let
+                eventData =
+                    { streamId = meal.streamId
+                    , expectedStreamPosition = meal.streamPosition + 1
+                    , type_ = "MealDeleted"
+                    , schemaVersion = 1
+                    , payload = E.object []
+                    , correlationId = correlationId
+                    , causationId = causationId
+                    }
+            in
+            ( model
+            , Cmd.none
+            , Ev.persist eventData
             )
 
         EditMealMsg emsg ->
@@ -150,15 +187,15 @@ view model =
 
 viewMealList : List Meal -> Html Msg
 viewMealList meals =
-    table [class "striped"]
-        [ thead [] [
-            tr []
+    table [ class "striped" ]
+        [ thead []
+            [ tr []
                 [ th [] [ text "Ingredients" ]
                 , th [] [ text "DateTime" ]
                 , th [] [ text "Notes" ]
-                , th [] [  ]
+                , th [] []
                 ]
-        ]
+            ]
         , tbody [] (List.map viewMeal meals)
         ]
 
@@ -169,21 +206,31 @@ viewMeal meal =
         [ td [] [ text (String.join ", " meal.ingredients) ]
         , td [] [ text meal.datetime ]
         , td [] [ text meal.notes ]
-        , td [] [ button [ onClick (OpenDialog meal) ] [ text "Edit" ] ]
+        , td []
+            [ fieldset [ attribute "role" "group", style "margin" "0" ]
+                [ button [ onClick (OpenDialog meal), style "padding" "10 15" ] [ Symbols.editOutline ]
+                , button [ class "secondary", onClick (DeleteMeal meal), style "padding" "15" ] [ Symbols.deleteOutline ]
+                ]
+            ]
         ]
-        
 
 
 parseMealEvent : Ev.Envelope -> Maybe HydrationEvent
 parseMealEvent envelope =
-    envelope.payload
-        |> D.decodeValue
-            (D.map3 HydrationEvent
+    let
+        decoder =
+            D.map3 HydrationEvent
                 (decodeMealEvent envelope.type_)
                 (D.succeed envelope.streamId)
                 (D.succeed envelope.streamPosition)
-            )
-        |> Result.toMaybe
+    in
+    if envelope.streamId |> String.startsWith "meal" |> not then
+        Nothing
+
+    else
+        envelope.payload
+            |> D.decodeValue decoder
+            |> Result.toMaybe
 
 
 decodeMealEvent : String -> D.Decoder Event

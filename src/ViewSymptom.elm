@@ -13,12 +13,13 @@ module ViewSymptom exposing
 
 import EditSymptom as ES
 import Event as Ev
-import Html exposing (..)
+import Html exposing (Html, button, div, fieldset, h1, table, tbody, td, text, th, thead, tr)
+import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
 import Json.Decode as D
+import Json.Encode as E
 import Set
-import Html.Attributes exposing (class)
-import EditSymptom exposing (view)
+import Symbols
 
 
 type alias Model =
@@ -47,6 +48,7 @@ type Msg
     | OpenDialog Symptom
     | OpenNewSymptomDialog
     | CloseDialog
+    | DeleteSymptom Symptom
     | EditSymptomMsg ES.Msg
 
 
@@ -61,6 +63,16 @@ type Event
 
 type HydrationEvent
     = HydrationEvent Event String Int -- StreamId, StreamPosition
+
+
+correlationId : String
+correlationId =
+    causationId
+
+
+causationId : String
+causationId =
+    "view-symptom"
 
 
 init : ( Model, Cmd Msg )
@@ -127,6 +139,23 @@ update msg model =
             , Cmd.none
             )
 
+        DeleteSymptom symptom ->
+            let
+                eventData =
+                    { streamId = symptom.streamId
+                    , expectedStreamPosition = symptom.streamPosition + 1
+                    , type_ = "SymptomDeleted"
+                    , schemaVersion = 1
+                    , payload = E.object []
+                    , correlationId = correlationId
+                    , causationId = causationId
+                    }
+            in
+            ( model
+            , Cmd.none
+            , Ev.persist eventData
+            )
+
         EditSymptomMsg esmsg ->
             case model.dialog of
                 Closed ->
@@ -157,17 +186,19 @@ view model =
                 ES.view emodel EditSymptomMsg CloseDialog
         ]
 
+
 viewSymptomList : List Symptom -> Html Msg
 viewSymptomList symptoms =
-    table [class "striped"]
-        [ thead [] [
-            tr []
+    table [ class "striped" ]
+        [ thead []
+            [ tr []
                 [ th [] [ text "Ingredients" ]
                 , th [] [ text "DateTime" ]
+                , th [] [ text "Severity" ]
                 , th [] [ text "Notes" ]
-                , th [] [  ]
+                , th [] []
                 ]
-        ]
+            ]
         , tbody [] (List.map viewSymptom symptoms)
         ]
 
@@ -179,7 +210,12 @@ viewSymptom symptom =
         , td [] [ text symptom.datetime ]
         , td [] [ text (Maybe.withDefault "" (symptom.severity |> Maybe.map String.fromInt)) ]
         , td [] [ text symptom.notes ]
-        , td [] [ button [ onClick (OpenDialog symptom) ] [ text "Edit" ] ]
+        , td []
+            [ fieldset [ attribute "role" "group", style "margin" "0" ]
+                [ button [ onClick (OpenDialog symptom), style "padding" "10 15" ] [ Symbols.editOutline ]
+                , button [ class "secondary", onClick (DeleteSymptom symptom), style "padding" "15" ] [ Symbols.deleteOutline ]
+                ]
+            ]
         ]
 
 
@@ -192,14 +228,19 @@ parseSymptomEvent envelope =
                 (D.succeed envelope.streamId)
                 (D.succeed envelope.streamPosition)
     in
-    envelope.payload
-        |> D.decodeValue decoder
-        |> Result.toMaybe
+    if envelope.streamId |> String.startsWith "symptom" |> not then
+        Nothing
+
+    else
+        envelope.payload
+            |> D.decodeValue decoder
+            |> Debug.log "Decoded Symptom Event"
+            |> Result.toMaybe
 
 
 decodeSymptomEvent : String -> D.Decoder Event
 decodeSymptomEvent type_ =
-    case type_ of
+    case Debug.log "Decoding type" type_ of
         "CategoryUpdated" ->
             D.map CategoryUpdated (D.field "category" D.string)
 
@@ -254,8 +295,13 @@ applySymptomEventList (HydrationEvent ev streamId streamPosition) model =
 
                 ( Nothing, Nothing ) ->
                     symptoms
+
+        sortedNewSymptoms =
+            newSymptoms
+                |> List.sortBy .datetime
+                |> List.reverse
     in
-    { model | symptoms = newSymptoms }
+    { model | symptoms = sortedNewSymptoms }
 
 
 applyEvent : Event -> Maybe Symptom -> String -> Maybe Symptom

@@ -5462,6 +5462,7 @@ var $author$project$ViewMeal$decodeMealEvent = function (type_) {
 	}
 };
 var $elm$json$Json$Decode$map3 = _Json_map3;
+var $elm$core$Basics$not = _Basics_not;
 var $elm$core$Result$toMaybe = function (result) {
 	if (result.$ === 'Ok') {
 		var v = result.a;
@@ -5471,16 +5472,14 @@ var $elm$core$Result$toMaybe = function (result) {
 	}
 };
 var $author$project$ViewMeal$parseMealEvent = function (envelope) {
-	return $elm$core$Result$toMaybe(
-		A2(
-			$elm$json$Json$Decode$decodeValue,
-			A4(
-				$elm$json$Json$Decode$map3,
-				$author$project$ViewMeal$HydrationEvent,
-				$author$project$ViewMeal$decodeMealEvent(envelope.type_),
-				$elm$json$Json$Decode$succeed(envelope.streamId),
-				$elm$json$Json$Decode$succeed(envelope.streamPosition)),
-			envelope.payload));
+	var decoder = A4(
+		$elm$json$Json$Decode$map3,
+		$author$project$ViewMeal$HydrationEvent,
+		$author$project$ViewMeal$decodeMealEvent(envelope.type_),
+		$elm$json$Json$Decode$succeed(envelope.streamId),
+		$elm$json$Json$Decode$succeed(envelope.streamPosition));
+	return (!A2($elm$core$String$startsWith, 'meal', envelope.streamId)) ? $elm$core$Maybe$Nothing : $elm$core$Result$toMaybe(
+		A2($elm$json$Json$Decode$decodeValue, decoder, envelope.payload));
 };
 var $author$project$ViewSymptom$HydrationEvent = F3(
 	function (a, b, c) {
@@ -5500,8 +5499,10 @@ var $author$project$ViewSymptom$SeverityUpdated = function (a) {
 };
 var $author$project$ViewSymptom$SymptomCreated = {$: 'SymptomCreated'};
 var $author$project$ViewSymptom$SymptomDeleted = {$: 'SymptomDeleted'};
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$ViewSymptom$decodeSymptomEvent = function (type_) {
-	switch (type_) {
+	var _v0 = A2($elm$core$Debug$log, 'Decoding type', type_);
+	switch (_v0) {
 		case 'CategoryUpdated':
 			return A2(
 				$elm$json$Json$Decode$map,
@@ -5545,8 +5546,11 @@ var $author$project$ViewSymptom$parseSymptomEvent = function (envelope) {
 		$author$project$ViewSymptom$decodeSymptomEvent(envelope.type_),
 		$elm$json$Json$Decode$succeed(envelope.streamId),
 		$elm$json$Json$Decode$succeed(envelope.streamPosition));
-	return $elm$core$Result$toMaybe(
-		A2($elm$json$Json$Decode$decodeValue, decoder, envelope.payload));
+	return (!A2($elm$core$String$startsWith, 'symptom', envelope.streamId)) ? $elm$core$Maybe$Nothing : $elm$core$Result$toMaybe(
+		A2(
+			$elm$core$Debug$log,
+			'Decoded Symptom Event',
+			A2($elm$json$Json$Decode$decodeValue, decoder, envelope.payload)));
 };
 var $author$project$Main$decodeEvent = function (env) {
 	var makeMsg = function (_v0) {
@@ -5675,7 +5679,10 @@ var $author$project$Event$recieveEvents = function (toMsg) {
 						function ($) {
 							return $.streamPosition;
 						})),
-				toMsg)));
+				A2(
+					$elm$core$Basics$composeR,
+					toMsg,
+					$elm$core$Debug$log('Received Events')))));
 };
 var $author$project$Event$DecodingError = {$: 'DecodingError'};
 var $elm$core$Basics$always = F2(
@@ -6018,7 +6025,10 @@ var $author$project$DynamicSelect$init = function (items) {
 };
 var $author$project$EditSymptom$applyPersistanceResult = F2(
 	function (event, model) {
-		var _v0 = _Utils_Tuple2(event, model);
+		var _v0 = A2(
+			$elm$core$Debug$log,
+			'applying',
+			_Utils_Tuple2(event, model));
 		if ((_v0.a.$ === 'AssignedSymptomId') && (_v0.b.$ === 'Creating')) {
 			var streamId = _v0.a.a;
 			var categoriesList = _v0.b.a;
@@ -6158,9 +6168,16 @@ var $author$project$ViewSymptom$applySymptomEventList = F2(
 				}
 			}
 		}();
+		var sortedNewSymptoms = $elm$core$List$reverse(
+			A2(
+				$elm$core$List$sortBy,
+				function ($) {
+					return $.datetime;
+				},
+				newSymptoms));
 		return _Utils_update(
 			model,
-			{symptoms: newSymptoms});
+			{symptoms: sortedNewSymptoms});
 	});
 var $author$project$ViewSymptom$applyPersistanceResult = F2(
 	function (events, model) {
@@ -6232,8 +6249,9 @@ var $author$project$Main$applyTypeEvent = F2(
 	});
 var $author$project$Main$NoOp = {$: 'NoOp'};
 var $author$project$Main$mapPersistanceResult = function (result) {
-	if (result.$ === 'Ok') {
-		var envelope = result.a;
+	var _v0 = A2($elm$core$Debug$log, '', result);
+	if (_v0.$ === 'Ok') {
+		var envelope = _v0.a;
 		return $author$project$Main$PersistanceResult(
 			$author$project$Main$decodeEvent(envelope));
 	} else {
@@ -6614,6 +6632,132 @@ var $author$project$Event$update = F3(
 var $author$project$ViewMeal$EditMealMsg = function (a) {
 	return {$: 'EditMealMsg', a: a};
 };
+var $author$project$ViewMeal$causationId = 'view-meal';
+var $author$project$ViewMeal$correlationId = $author$project$ViewMeal$causationId;
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
 var $author$project$EditMeal$Creating = function (a) {
 	return {$: 'Creating', a: a};
 };
@@ -6683,6 +6827,18 @@ var $author$project$EditMeal$initWithMeal = F2(
 					meal.notes)),
 			$elm$core$Platform$Cmd$none);
 	});
+var $author$project$Event$InternalPersistRequest = F2(
+	function (a, b) {
+		return {$: 'InternalPersistRequest', a: a, b: b};
+	});
+var $author$project$Event$persist = function (eventData) {
+	return A2(
+		$elm$core$Task$perform,
+		function (now) {
+			return A2($author$project$Event$InternalPersistRequest, now, eventData);
+		},
+		$elm$time$Time$now);
+};
 var $author$project$EditMeal$InteractionMealEvent = F2(
 	function (a, b) {
 		return {$: 'InteractionMealEvent', a: a, b: b};
@@ -6822,18 +6978,6 @@ var $author$project$EditMeal$encodeMealEvent = function (ev) {
 			return _Utils_Tuple2('MealDeleted', $elm$json$Json$Encode$null);
 	}
 };
-var $author$project$Event$InternalPersistRequest = F2(
-	function (a, b) {
-		return {$: 'InternalPersistRequest', a: a, b: b};
-	});
-var $author$project$Event$persist = function (eventData) {
-	return A2(
-		$elm$core$Task$perform,
-		function (now) {
-			return A2($author$project$Event$InternalPersistRequest, now, eventData);
-		},
-		$elm$time$Time$now);
-};
 var $author$project$EditMeal$persistMealEvent = F2(
 	function (mealEvent, meal) {
 		if (mealEvent.$ === 'InteractionMealEvent') {
@@ -6857,7 +7001,6 @@ var $author$project$EditMeal$persistMealEvent = F2(
 				$elm$core$Platform$Cmd$none);
 		}
 	});
-var $elm$core$Basics$not = _Basics_not;
 var $author$project$SearchableDropdown$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6951,12 +7094,14 @@ var $author$project$ViewMeal$update = F2(
 				return _Utils_Tuple3(model, $elm$core$Platform$Cmd$none, $elm$core$Platform$Cmd$none);
 			case 'OpenDialog':
 				var meal = msg.a;
-				var ingredients = A2(
-					$elm$core$List$concatMap,
-					function (m) {
-						return m.ingredients;
-					},
-					model.meals);
+				var ingredients = $elm$core$Set$toList(
+					$elm$core$Set$fromList(
+						A2(
+							$elm$core$List$concatMap,
+							function (m) {
+								return m.ingredients;
+							},
+							model.meals)));
 				var _v1 = A2($author$project$EditMeal$initWithMeal, meal, ingredients);
 				var editModel = _v1.a;
 				var cmd = _v1.b;
@@ -6969,12 +7114,14 @@ var $author$project$ViewMeal$update = F2(
 					A2($elm$core$Platform$Cmd$map, $author$project$ViewMeal$EditMealMsg, cmd),
 					$elm$core$Platform$Cmd$none);
 			case 'OpenNewMealDialog':
-				var ingredients = A2(
-					$elm$core$List$concatMap,
-					function (m) {
-						return m.ingredients;
-					},
-					model.meals);
+				var ingredients = $elm$core$Set$toList(
+					$elm$core$Set$fromList(
+						A2(
+							$elm$core$List$concatMap,
+							function (m) {
+								return m.ingredients;
+							},
+							model.meals)));
 				var _v2 = $author$project$EditMeal$init(ingredients);
 				var editModel = _v2.a;
 				var cmd = _v2.b;
@@ -6994,6 +7141,21 @@ var $author$project$ViewMeal$update = F2(
 						{dialog: $author$project$ViewMeal$Closed}),
 					$elm$core$Platform$Cmd$none,
 					$elm$core$Platform$Cmd$none);
+			case 'DeleteMeal':
+				var meal = msg.a;
+				var eventData = {
+					causationId: $author$project$ViewMeal$causationId,
+					correlationId: $author$project$ViewMeal$correlationId,
+					expectedStreamPosition: meal.streamPosition + 1,
+					payload: $elm$json$Json$Encode$object(_List_Nil),
+					schemaVersion: 1,
+					streamId: meal.streamId,
+					type_: 'MealDeleted'
+				};
+				return _Utils_Tuple3(
+					model,
+					$elm$core$Platform$Cmd$none,
+					$author$project$Event$persist(eventData));
 			default:
 				var emsg = msg.a;
 				var _v3 = model.dialog;
@@ -7019,130 +7181,8 @@ var $author$project$ViewMeal$update = F2(
 var $author$project$ViewSymptom$EditSymptomMsg = function (a) {
 	return {$: 'EditSymptomMsg', a: a};
 };
-var $elm$core$Set$Set_elm_builtin = function (a) {
-	return {$: 'Set_elm_builtin', a: a};
-};
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
-var $elm$core$Dict$Black = {$: 'Black'};
-var $elm$core$Dict$RBNode_elm_builtin = F5(
-	function (a, b, c, d, e) {
-		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
-	});
-var $elm$core$Dict$Red = {$: 'Red'};
-var $elm$core$Dict$balance = F5(
-	function (color, key, value, left, right) {
-		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
-			var _v1 = right.a;
-			var rK = right.b;
-			var rV = right.c;
-			var rLeft = right.d;
-			var rRight = right.e;
-			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-				var _v3 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var lLeft = left.d;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					key,
-					value,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					rK,
-					rV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
-					rRight);
-			}
-		} else {
-			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
-				var _v5 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var _v6 = left.d;
-				var _v7 = _v6.a;
-				var llK = _v6.b;
-				var llV = _v6.c;
-				var llLeft = _v6.d;
-				var llRight = _v6.e;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					lK,
-					lV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
-			} else {
-				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
-			}
-		}
-	});
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$insertHelp = F3(
-	function (key, value, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
-		} else {
-			var nColor = dict.a;
-			var nKey = dict.b;
-			var nValue = dict.c;
-			var nLeft = dict.d;
-			var nRight = dict.e;
-			var _v1 = A2($elm$core$Basics$compare, key, nKey);
-			switch (_v1.$) {
-				case 'LT':
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						A3($elm$core$Dict$insertHelp, key, value, nLeft),
-						nRight);
-				case 'EQ':
-					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
-				default:
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						nLeft,
-						A3($elm$core$Dict$insertHelp, key, value, nRight));
-			}
-		}
-	});
-var $elm$core$Dict$insert = F3(
-	function (key, value, dict) {
-		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
-var $elm$core$Set$insert = F2(
-	function (key, _v0) {
-		var dict = _v0.a;
-		return $elm$core$Set$Set_elm_builtin(
-			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
-	});
-var $elm$core$Set$fromList = function (list) {
-	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
-};
+var $author$project$ViewSymptom$causationId = 'view-symptom';
+var $author$project$ViewSymptom$correlationId = $author$project$ViewSymptom$causationId;
 var $author$project$EditSymptom$Creating = function (a) {
 	return {$: 'Creating', a: a};
 };
@@ -7226,7 +7266,7 @@ var $author$project$EditSymptom$encodeSymptomEvent = function (ev) {
 		case 'CategoryChanged':
 			var category = ev.a;
 			return _Utils_Tuple2(
-				'CategoryChanged',
+				'CategoryUpdated',
 				$elm$json$Json$Encode$object(
 					_List_fromArray(
 						[
@@ -7437,6 +7477,21 @@ var $author$project$ViewSymptom$update = F2(
 						{dialog: $author$project$ViewSymptom$Closed}),
 					$elm$core$Platform$Cmd$none,
 					$elm$core$Platform$Cmd$none);
+			case 'DeleteSymptom':
+				var symptom = msg.a;
+				var eventData = {
+					causationId: $author$project$ViewSymptom$causationId,
+					correlationId: $author$project$ViewSymptom$correlationId,
+					expectedStreamPosition: symptom.streamPosition + 1,
+					payload: $elm$json$Json$Encode$object(_List_Nil),
+					schemaVersion: 1,
+					streamId: symptom.streamId,
+					type_: 'SymptomDeleted'
+				};
+				return _Utils_Tuple3(
+					model,
+					$elm$core$Platform$Cmd$none,
+					$author$project$Event$persist(eventData));
 			default:
 				var esmsg = msg.a;
 				var _v3 = model.dialog;
@@ -7926,9 +7981,60 @@ var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $author$project$ViewMeal$DeleteMeal = function (a) {
+	return {$: 'DeleteMeal', a: a};
+};
 var $author$project$ViewMeal$OpenDialog = function (a) {
 	return {$: 'OpenDialog', a: a};
 };
+var $elm$svg$Svg$Attributes$d = _VirtualDom_attribute('d');
+var $elm$svg$Svg$Attributes$height = _VirtualDom_attribute('height');
+var $elm$svg$Svg$Attributes$id = _VirtualDom_attribute('id');
+var $elm$svg$Svg$trustedNode = _VirtualDom_nodeNS('http://www.w3.org/2000/svg');
+var $elm$svg$Svg$path = $elm$svg$Svg$trustedNode('path');
+var $elm$svg$Svg$svg = $elm$svg$Svg$trustedNode('svg');
+var $elm$svg$Svg$text = $elm$virtual_dom$VirtualDom$text;
+var $elm$svg$Svg$title = $elm$svg$Svg$trustedNode('title');
+var $elm$svg$Svg$Attributes$viewBox = _VirtualDom_attribute('viewBox');
+var $elm$svg$Svg$Attributes$width = _VirtualDom_attribute('width');
+var $author$project$Symbols$makePath = F2(
+	function (ariaTitle, pathData) {
+		return A2(
+			$elm$svg$Svg$svg,
+			_List_fromArray(
+				[
+					$elm$svg$Svg$Attributes$width(''),
+					$elm$svg$Svg$Attributes$height('1.5rem'),
+					$elm$svg$Svg$Attributes$viewBox('0 0 640 640'),
+					A2($elm$html$Html$Attributes$attribute, 'role', 'img'),
+					A2($elm$html$Html$Attributes$attribute, 'aria-labelledby', 'title')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$svg$Svg$title,
+					_List_fromArray(
+						[
+							$elm$svg$Svg$Attributes$id('title')
+						]),
+					_List_fromArray(
+						[
+							$elm$svg$Svg$text(ariaTitle)
+						])),
+					A2(
+					$elm$svg$Svg$path,
+					_List_fromArray(
+						[
+							$elm$svg$Svg$Attributes$d(pathData)
+						]),
+					_List_Nil)
+				]));
+	});
+var $author$project$Symbols$deleteOutline = A2($author$project$Symbols$makePath, 'Delete', 'M232 68.8C236 56 248 48 262 48L377 48C391 48 403 56 407 68.8L424 112L520 112C533 112 544 122 544 136C544 149 533 160 520 160L120 160C106 160 96 149 96 136C96 122 106 112 120 112L216 112L232 68.8zM147 516.8L124 208L172 208L195 513.2C196 521 203 528 211 528L428 528C437 528 443 521 444 513.2L467 208L515 208L492 516.7C489 550 462 576 428 576L211 576C178 576 150 550 147 516.7z');
+var $author$project$Symbols$editOutline = A2($author$project$Symbols$makePath, 'Edit', 'M122 379.1C112 389 104 403 100 417.8L64 545.6C62 553 64 562 71 569C77 575 86 577 94 575.2L222 539.7C236 535 250 527 261 517.1L555 223.1C568 209 576 191 576 172C576 152 568 134 554 120.9L519 85.2C505 71 487 64 468 64C448 64 430 71 416 85.2L122 379.2zM468 112C474 112 480 114 485 119.1L520 154.8C525 159 528 165 528 172C528 178 525 184 520 189.2L468 242.1L397 172L450 119.1C455 114 461 112 468 112zM173 396L364 205.9L434 276L244 466.1L173 396zM145 435.3L204 494.7L122 517.5L145 435.3z');
+var $elm$html$Html$fieldset = _VirtualDom_node('fieldset');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$ViewMeal$viewMeal = function (meal) {
 	return A2(
@@ -7964,15 +8070,35 @@ var $author$project$ViewMeal$viewMeal = function (meal) {
 				_List_fromArray(
 					[
 						A2(
-						$elm$html$Html$button,
+						$elm$html$Html$fieldset,
 						_List_fromArray(
 							[
-								$elm$html$Html$Events$onClick(
-								$author$project$ViewMeal$OpenDialog(meal))
+								A2($elm$html$Html$Attributes$attribute, 'role', 'group'),
+								A2($elm$html$Html$Attributes$style, 'margin', '0')
 							]),
 						_List_fromArray(
 							[
-								$elm$html$Html$text('Edit')
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$ViewMeal$OpenDialog(meal)),
+										A2($elm$html$Html$Attributes$style, 'padding', '10 15')
+									]),
+								_List_fromArray(
+									[$author$project$Symbols$editOutline])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('secondary'),
+										$elm$html$Html$Events$onClick(
+										$author$project$ViewMeal$DeleteMeal(meal)),
+										A2($elm$html$Html$Attributes$style, 'padding', '15')
+									]),
+								_List_fromArray(
+									[$author$project$Symbols$deleteOutline]))
 							]))
 					]))
 			]));
@@ -8098,8 +8224,6 @@ var $author$project$DynamicSelect$details = F2(
 	function (attrs, nodes) {
 		return A3($elm$html$Html$node, 'details', attrs, nodes);
 	});
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$DynamicSelect$makeItem = F3(
 	function (onChange, item, isSelected) {
 		return A2(
@@ -8240,8 +8364,6 @@ var $author$project$DynamicSelect$view = F3(
 var $author$project$EditSymptom$SeverityUpdated = function (a) {
 	return {$: 'SeverityUpdated', a: a};
 };
-var $elm$html$Html$fieldset = _VirtualDom_node('fieldset');
-var $elm$core$Debug$log = _Debug_log;
 var $elm$html$Html$Attributes$max = $elm$html$Html$Attributes$stringProperty('max');
 var $elm$html$Html$Attributes$min = $elm$html$Html$Attributes$stringProperty('min');
 var $author$project$EditSymptom$viewSeverity = function (severity) {
@@ -8404,6 +8526,9 @@ var $author$project$EditSymptom$view = F3(
 						]))
 				]));
 	});
+var $author$project$ViewSymptom$DeleteSymptom = function (a) {
+	return {$: 'DeleteSymptom', a: a};
+};
 var $author$project$ViewSymptom$OpenDialog = function (a) {
 	return {$: 'OpenDialog', a: a};
 };
@@ -8451,15 +8576,35 @@ var $author$project$ViewSymptom$viewSymptom = function (symptom) {
 				_List_fromArray(
 					[
 						A2(
-						$elm$html$Html$button,
+						$elm$html$Html$fieldset,
 						_List_fromArray(
 							[
-								$elm$html$Html$Events$onClick(
-								$author$project$ViewSymptom$OpenDialog(symptom))
+								A2($elm$html$Html$Attributes$attribute, 'role', 'group'),
+								A2($elm$html$Html$Attributes$style, 'margin', '0')
 							]),
 						_List_fromArray(
 							[
-								$elm$html$Html$text('Edit')
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Events$onClick(
+										$author$project$ViewSymptom$OpenDialog(symptom)),
+										A2($elm$html$Html$Attributes$style, 'padding', '10 15')
+									]),
+								_List_fromArray(
+									[$author$project$Symbols$editOutline])),
+								A2(
+								$elm$html$Html$button,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$class('secondary'),
+										$elm$html$Html$Events$onClick(
+										$author$project$ViewSymptom$DeleteSymptom(symptom)),
+										A2($elm$html$Html$Attributes$style, 'padding', '15')
+									]),
+								_List_fromArray(
+									[$author$project$Symbols$deleteOutline]))
 							]))
 					]))
 			]));
@@ -8496,6 +8641,13 @@ var $author$project$ViewSymptom$viewSymptomList = function (symptoms) {
 								_List_fromArray(
 									[
 										$elm$html$Html$text('DateTime')
+									])),
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Severity')
 									])),
 								A2(
 								$elm$html$Html$th,
