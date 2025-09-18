@@ -17,6 +17,8 @@ import Html exposing (..)
 import Html.Events exposing (onClick)
 import Json.Decode as D
 import Set
+import Html.Attributes exposing (class)
+import EditSymptom exposing (view)
 
 
 type alias Model =
@@ -146,7 +148,7 @@ view model =
     div []
         [ h1 [] [ text "Symptoms" ]
         , button [ onClick OpenNewSymptomDialog ] [ text "Add Symptom" ]
-        , ul [] (List.map viewSymptom <| model.symptoms)
+        , viewSymptomList model.symptoms
         , case model.dialog of
             Closed ->
                 text ""
@@ -155,14 +157,29 @@ view model =
                 ES.view emodel EditSymptomMsg CloseDialog
         ]
 
+viewSymptomList : List Symptom -> Html Msg
+viewSymptomList symptoms =
+    table [class "striped"]
+        [ thead [] [
+            tr []
+                [ th [] [ text "Ingredients" ]
+                , th [] [ text "DateTime" ]
+                , th [] [ text "Notes" ]
+                , th [] [  ]
+                ]
+        ]
+        , tbody [] (List.map viewSymptom symptoms)
+        ]
+
 
 viewSymptom : Symptom -> Html Msg
 viewSymptom symptom =
-    li []
-        [ div []
-            [ text ("Symptom at " ++ symptom.datetime)
-            , button [ onClick (OpenDialog symptom) ] [ text "Edit" ]
-            ]
+    tr []
+        [ td [] [ text symptom.category ]
+        , td [] [ text symptom.datetime ]
+        , td [] [ text (Maybe.withDefault "" (symptom.severity |> Maybe.map String.fromInt)) ]
+        , td [] [ text symptom.notes ]
+        , td [] [ button [ onClick (OpenDialog symptom) ] [ text "Edit" ] ]
         ]
 
 

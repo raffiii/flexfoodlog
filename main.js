@@ -5943,9 +5943,16 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 				}
 			}
 		}();
+		var sortedNewMeals = $elm$core$List$reverse(
+			A2(
+				$elm$core$List$sortBy,
+				function ($) {
+					return $.datetime;
+				},
+				newMeals));
 		return _Utils_update(
 			model,
-			{meals: newMeals});
+			{meals: sortedNewMeals});
 	});
 var $author$project$EditMeal$Existing = function (a) {
 	return {$: 'Existing', a: a};
@@ -7558,7 +7565,6 @@ var $elm$html$Html$Events$onClick = function (msg) {
 		'click',
 		$elm$json$Json$Decode$succeed(msg));
 };
-var $elm$html$Html$ul = _VirtualDom_node('ul');
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
 		return A2(
@@ -7715,6 +7721,7 @@ var $elm$html$Html$Events$preventDefaultOn = F2(
 	});
 var $elm$html$Html$summary = _VirtualDom_node('summary');
 var $elm$core$String$toLower = _String_toLower;
+var $elm$html$Html$ul = _VirtualDom_node('ul');
 var $author$project$SearchableDropdown$view = F4(
 	function (model, mapParent, add, remove) {
 		var toggleItem = F2(
@@ -7914,21 +7921,48 @@ var $author$project$EditMeal$view = F3(
 						]))
 				]));
 	});
+var $elm$html$Html$table = _VirtualDom_node('table');
+var $elm$html$Html$tbody = _VirtualDom_node('tbody');
+var $elm$html$Html$th = _VirtualDom_node('th');
+var $elm$html$Html$thead = _VirtualDom_node('thead');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
 var $author$project$ViewMeal$OpenDialog = function (a) {
 	return {$: 'OpenDialog', a: a};
 };
+var $elm$html$Html$td = _VirtualDom_node('td');
 var $author$project$ViewMeal$viewMeal = function (meal) {
 	return A2(
-		$elm$html$Html$li,
+		$elm$html$Html$tr,
 		_List_Nil,
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$div,
+				$elm$html$Html$td,
 				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Meal at ' + meal.datetime),
+						$elm$html$Html$text(
+						A2($elm$core$String$join, ', ', meal.ingredients))
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(meal.datetime)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(meal.notes)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
 						A2(
 						$elm$html$Html$button,
 						_List_fromArray(
@@ -7941,6 +7975,55 @@ var $author$project$ViewMeal$viewMeal = function (meal) {
 								$elm$html$Html$text('Edit')
 							]))
 					]))
+			]));
+};
+var $author$project$ViewMeal$viewMealList = function (meals) {
+	return A2(
+		$elm$html$Html$table,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('striped')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$thead,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$tr,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Ingredients')
+									])),
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('DateTime')
+									])),
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Notes')
+									])),
+								A2($elm$html$Html$th, _List_Nil, _List_Nil)
+							]))
+					])),
+				A2(
+				$elm$html$Html$tbody,
+				_List_Nil,
+				A2($elm$core$List$map, $author$project$ViewMeal$viewMeal, meals))
 			]));
 };
 var $author$project$ViewMeal$view = function (model) {
@@ -7966,10 +8049,7 @@ var $author$project$ViewMeal$view = function (model) {
 					[
 						$elm$html$Html$text('Add Meal')
 					])),
-				A2(
-				$elm$html$Html$ul,
-				_List_Nil,
-				A2($elm$core$List$map, $author$project$ViewMeal$viewMeal, model.meals)),
+				$author$project$ViewMeal$viewMealList(model.meals),
 				function () {
 				var _v0 = model.dialog;
 				if (_v0.$ === 'Closed') {
@@ -8329,16 +8409,47 @@ var $author$project$ViewSymptom$OpenDialog = function (a) {
 };
 var $author$project$ViewSymptom$viewSymptom = function (symptom) {
 	return A2(
-		$elm$html$Html$li,
+		$elm$html$Html$tr,
 		_List_Nil,
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$div,
+				$elm$html$Html$td,
 				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Symptom at ' + symptom.datetime),
+						$elm$html$Html$text(symptom.category)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(symptom.datetime)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						A2(
+							$elm$core$Maybe$withDefault,
+							'',
+							A2($elm$core$Maybe$map, $elm$core$String$fromInt, symptom.severity)))
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(symptom.notes)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
 						A2(
 						$elm$html$Html$button,
 						_List_fromArray(
@@ -8351,6 +8462,55 @@ var $author$project$ViewSymptom$viewSymptom = function (symptom) {
 								$elm$html$Html$text('Edit')
 							]))
 					]))
+			]));
+};
+var $author$project$ViewSymptom$viewSymptomList = function (symptoms) {
+	return A2(
+		$elm$html$Html$table,
+		_List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('striped')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$thead,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$tr,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Ingredients')
+									])),
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('DateTime')
+									])),
+								A2(
+								$elm$html$Html$th,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('Notes')
+									])),
+								A2($elm$html$Html$th, _List_Nil, _List_Nil)
+							]))
+					])),
+				A2(
+				$elm$html$Html$tbody,
+				_List_Nil,
+				A2($elm$core$List$map, $author$project$ViewSymptom$viewSymptom, symptoms))
 			]));
 };
 var $author$project$ViewSymptom$view = function (model) {
@@ -8376,10 +8536,7 @@ var $author$project$ViewSymptom$view = function (model) {
 					[
 						$elm$html$Html$text('Add Symptom')
 					])),
-				A2(
-				$elm$html$Html$ul,
-				_List_Nil,
-				A2($elm$core$List$map, $author$project$ViewSymptom$viewSymptom, model.symptoms)),
+				$author$project$ViewSymptom$viewSymptomList(model.symptoms),
 				function () {
 				var _v0 = model.dialog;
 				if (_v0.$ === 'Closed') {

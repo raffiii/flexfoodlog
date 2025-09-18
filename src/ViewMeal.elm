@@ -16,6 +16,7 @@ import Event as Ev
 import Html exposing (..)
 import Html.Events exposing (onClick)
 import Json.Decode as D
+import Html.Attributes exposing (class)
 
 
 type alias Model =
@@ -137,7 +138,7 @@ view model =
     div []
         [ h1 [] [ text "Meals" ]
         , button [ onClick OpenNewMealDialog ] [ text "Add Meal" ]
-        , ul [] (List.map viewMeal <| model.meals)
+        , viewMealList model.meals
         , case model.dialog of
             Closed ->
                 text ""
@@ -147,14 +148,30 @@ view model =
         ]
 
 
+viewMealList : List Meal -> Html Msg
+viewMealList meals =
+    table [class "striped"]
+        [ thead [] [
+            tr []
+                [ th [] [ text "Ingredients" ]
+                , th [] [ text "DateTime" ]
+                , th [] [ text "Notes" ]
+                , th [] [  ]
+                ]
+        ]
+        , tbody [] (List.map viewMeal meals)
+        ]
+
+
 viewMeal : Meal -> Html Msg
 viewMeal meal =
-    li []
-        [ div []
-            [ text ("Meal at " ++ meal.datetime)
-            , button [ onClick (OpenDialog meal) ] [ text "Edit" ]
-            ]
+    tr []
+        [ td [] [ text (String.join ", " meal.ingredients) ]
+        , td [] [ text meal.datetime ]
+        , td [] [ text meal.notes ]
+        , td [] [ button [ onClick (OpenDialog meal) ] [ text "Edit" ] ]
         ]
+        
 
 
 parseMealEvent : Ev.Envelope -> Maybe HydrationEvent
@@ -226,8 +243,13 @@ applyMealEventList (HydrationEvent ev streamId streamPosition) model =
 
                 ( Nothing, Nothing ) ->
                     meals
+
+        sortedNewMeals =
+            newMeals
+                |> List.sortBy .datetime
+                |> List.reverse
     in
-    { model | meals = newMeals }
+    { model | meals = sortedNewMeals }
 
 
 applyEvent : Event -> Maybe Meal -> String -> Maybe Meal
