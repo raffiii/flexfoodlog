@@ -5248,6 +5248,9 @@ var $author$project$Main$HydrationEvents = function (a) {
 var $author$project$Main$MealMsg = function (a) {
 	return {$: 'MealMsg', a: a};
 };
+var $author$project$Main$SymptomMsg = function (a) {
+	return {$: 'SymptomMsg', a: a};
+};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$field = _Json_decodeField;
@@ -5271,6 +5274,10 @@ var $author$project$ViewMeal$Closed = {$: 'Closed'};
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$ViewMeal$init = _Utils_Tuple2(
 	{dialog: $author$project$ViewMeal$Closed, meals: _List_Nil},
+	$elm$core$Platform$Cmd$none);
+var $author$project$ViewSymptom$Closed = {$: 'Closed'};
+var $author$project$ViewSymptom$init = _Utils_Tuple2(
+	{dialog: $author$project$ViewSymptom$Closed, symptoms: _List_Nil},
 	$elm$core$Platform$Cmd$none);
 var $author$project$Event$Model = function (seed) {
 	return {seed: seed};
@@ -5318,16 +5325,20 @@ var $author$project$Main$init = function (flags) {
 			flags));
 	var eventState = $author$project$Event$initialModel(
 		$elm$random$Random$initialSeed(seed));
-	var _v0 = $author$project$ViewMeal$init;
-	var mealModel = _v0.a;
-	var mealInitCmd = _v0.b;
+	var _v0 = $author$project$ViewSymptom$init;
+	var symptomModel = _v0.a;
+	var symptomCmd = _v0.b;
+	var _v1 = $author$project$ViewMeal$init;
+	var mealModel = _v1.a;
+	var mealInitCmd = _v1.b;
 	var initCmd = $elm$core$Platform$Cmd$batch(
 		_List_fromArray(
 			[
 				A2($elm$core$Platform$Cmd$map, $author$project$Main$MealMsg, mealInitCmd),
-				A2($elm$core$Platform$Cmd$map, $author$project$Main$HydrationEvents, $author$project$Event$hydrateAllStreams)
+				A2($elm$core$Platform$Cmd$map, $author$project$Main$HydrationEvents, $author$project$Event$hydrateAllStreams),
+				A2($elm$core$Platform$Cmd$map, $author$project$Main$SymptomMsg, symptomCmd)
 			]));
-	var model = {eventState: eventState, meals: mealModel};
+	var model = {eventState: eventState, meals: mealModel, symptoms: symptomModel};
 	return _Utils_Tuple2(model, initCmd);
 };
 var $author$project$Main$PersistanceResult = function (a) {
@@ -5336,6 +5347,9 @@ var $author$project$Main$PersistanceResult = function (a) {
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $author$project$Main$MealTypeEvent = function (a) {
 	return {$: 'MealTypeEvent', a: a};
+};
+var $author$project$Main$SymptomTypeEvent = function (a) {
+	return {$: 'SymptomTypeEvent', a: a};
 };
 var $elm$core$Basics$composeR = F3(
 	function (f, g, x) {
@@ -5370,13 +5384,13 @@ var $elm$core$Maybe$map = F2(
 			return $elm$core$Maybe$Nothing;
 		}
 	});
+var $author$project$ViewMeal$HydrationEvent = F3(
+	function (a, b, c) {
+		return {$: 'HydrationEvent', a: a, b: b, c: c};
+	});
 var $author$project$ViewMeal$DateTimeUpdated = function (a) {
 	return {$: 'DateTimeUpdated', a: a};
 };
-var $author$project$ViewMeal$HydrationEvent = F2(
-	function (a, b) {
-		return {$: 'HydrationEvent', a: a, b: b};
-	});
 var $author$project$ViewMeal$IngredientAdded = function (a) {
 	return {$: 'IngredientAdded', a: a};
 };
@@ -5409,59 +5423,45 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$ViewMeal$decodeMealEvent = F2(
-	function (type_, streamId) {
-		var mapMealEvent = function (decoder) {
-			return A3(
-				$elm$json$Json$Decode$map2,
-				$author$project$ViewMeal$HydrationEvent,
-				decoder,
-				$elm$json$Json$Decode$succeed(streamId));
-		};
-		switch (type_) {
-			case 'IngredientAdded':
-				return mapMealEvent(
+var $author$project$ViewMeal$decodeMealEvent = function (type_) {
+	switch (type_) {
+		case 'IngredientAdded':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewMeal$IngredientAdded,
+				A2($elm$json$Json$Decode$field, 'ingredient', $elm$json$Json$Decode$string));
+		case 'IngredientRemoved':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewMeal$IngredientRemoved,
+				A2($elm$json$Json$Decode$field, 'ingredient', $elm$json$Json$Decode$string));
+		case 'MealCreated':
+			return $elm$json$Json$Decode$succeed($author$project$ViewMeal$MealCreated);
+		case 'NotesUpdated':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewMeal$NotesUpdated,
+				A2(
+					$elm$json$Json$Decode$map,
+					$elm$core$Maybe$withDefault(''),
 					A2(
-						$elm$json$Json$Decode$map,
-						$author$project$ViewMeal$IngredientAdded,
-						A2($elm$json$Json$Decode$field, 'ingredient', $elm$json$Json$Decode$string)));
-			case 'IngredientRemoved':
-				return mapMealEvent(
-					A2(
-						$elm$json$Json$Decode$map,
-						$author$project$ViewMeal$IngredientRemoved,
-						A2($elm$json$Json$Decode$field, 'ingredient', $elm$json$Json$Decode$string)));
-			case 'MealCreated':
-				return mapMealEvent(
-					$elm$json$Json$Decode$succeed($author$project$ViewMeal$MealCreated));
-			case 'NotesUpdated':
-				return mapMealEvent(
-					A2(
-						$elm$json$Json$Decode$map,
-						$author$project$ViewMeal$NotesUpdated,
-						A2(
-							$elm$json$Json$Decode$map,
-							$elm$core$Maybe$withDefault(''),
-							A2(
-								$elm$json$Json$Decode$field,
-								'notes',
-								$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string)))));
-			case 'DateTimeUpdated':
-				return mapMealEvent(
-					A2(
-						$elm$json$Json$Decode$map,
-						$author$project$ViewMeal$DateTimeUpdated,
-						A2($elm$json$Json$Decode$field, 'datetime', $elm$json$Json$Decode$string)));
-			case 'MealDeleted':
-				return mapMealEvent(
-					$elm$json$Json$Decode$succeed($author$project$ViewMeal$MealDeleted));
-			case 'CreateMeal':
-				return mapMealEvent(
-					$elm$json$Json$Decode$succeed($author$project$ViewMeal$MealCreated));
-			default:
-				return $elm$json$Json$Decode$fail('Unknown event type: ' + type_);
-		}
-	});
+						$elm$json$Json$Decode$field,
+						'notes',
+						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string))));
+		case 'DateTimeUpdated':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewMeal$DateTimeUpdated,
+				A2($elm$json$Json$Decode$field, 'datetime', $elm$json$Json$Decode$string));
+		case 'MealDeleted':
+			return $elm$json$Json$Decode$succeed($author$project$ViewMeal$MealDeleted);
+		case 'CreateMeal':
+			return $elm$json$Json$Decode$succeed($author$project$ViewMeal$MealCreated);
+		default:
+			return $elm$json$Json$Decode$fail('Unknown event type: ' + type_);
+	}
+};
+var $elm$json$Json$Decode$map3 = _Json_map3;
 var $elm$core$Result$toMaybe = function (result) {
 	if (result.$ === 'Ok') {
 		var v = result.a;
@@ -5474,30 +5474,102 @@ var $author$project$ViewMeal$parseMealEvent = function (envelope) {
 	return $elm$core$Result$toMaybe(
 		A2(
 			$elm$json$Json$Decode$decodeValue,
-			A2($author$project$ViewMeal$decodeMealEvent, envelope.type_, envelope.streamId),
+			A4(
+				$elm$json$Json$Decode$map3,
+				$author$project$ViewMeal$HydrationEvent,
+				$author$project$ViewMeal$decodeMealEvent(envelope.type_),
+				$elm$json$Json$Decode$succeed(envelope.streamId),
+				$elm$json$Json$Decode$succeed(envelope.streamPosition)),
 			envelope.payload));
 };
+var $author$project$ViewSymptom$HydrationEvent = F3(
+	function (a, b, c) {
+		return {$: 'HydrationEvent', a: a, b: b, c: c};
+	});
+var $author$project$ViewSymptom$CategoryUpdated = function (a) {
+	return {$: 'CategoryUpdated', a: a};
+};
+var $author$project$ViewSymptom$DateTimeUpdated = function (a) {
+	return {$: 'DateTimeUpdated', a: a};
+};
+var $author$project$ViewSymptom$NotesUpdated = function (a) {
+	return {$: 'NotesUpdated', a: a};
+};
+var $author$project$ViewSymptom$SeverityUpdated = function (a) {
+	return {$: 'SeverityUpdated', a: a};
+};
+var $author$project$ViewSymptom$SymptomCreated = {$: 'SymptomCreated'};
+var $author$project$ViewSymptom$SymptomDeleted = {$: 'SymptomDeleted'};
+var $author$project$ViewSymptom$decodeSymptomEvent = function (type_) {
+	switch (type_) {
+		case 'CategoryUpdated':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewSymptom$CategoryUpdated,
+				A2($elm$json$Json$Decode$field, 'category', $elm$json$Json$Decode$string));
+		case 'SymptomCreated':
+			return $elm$json$Json$Decode$succeed($author$project$ViewSymptom$SymptomCreated);
+		case 'DateTimeUpdated':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewSymptom$DateTimeUpdated,
+				A2($elm$json$Json$Decode$field, 'datetime', $elm$json$Json$Decode$string));
+		case 'SymptomDeleted':
+			return $elm$json$Json$Decode$succeed($author$project$ViewSymptom$SymptomDeleted);
+		case 'CreateSymptom':
+			return $elm$json$Json$Decode$succeed($author$project$ViewSymptom$SymptomCreated);
+		case 'SeverityUpdated':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewSymptom$SeverityUpdated,
+				A2($elm$json$Json$Decode$field, 'severity', $elm$json$Json$Decode$int));
+		case 'NotesUpdated':
+			return A2(
+				$elm$json$Json$Decode$map,
+				$author$project$ViewSymptom$NotesUpdated,
+				A2(
+					$elm$json$Json$Decode$map,
+					$elm$core$Maybe$withDefault(''),
+					A2(
+						$elm$json$Json$Decode$field,
+						'notes',
+						$elm$json$Json$Decode$nullable($elm$json$Json$Decode$string))));
+		default:
+			return $elm$json$Json$Decode$fail('Unknown event type: ' + type_);
+	}
+};
+var $author$project$ViewSymptom$parseSymptomEvent = function (envelope) {
+	var decoder = A4(
+		$elm$json$Json$Decode$map3,
+		$author$project$ViewSymptom$HydrationEvent,
+		$author$project$ViewSymptom$decodeSymptomEvent(envelope.type_),
+		$elm$json$Json$Decode$succeed(envelope.streamId),
+		$elm$json$Json$Decode$succeed(envelope.streamPosition));
+	return $elm$core$Result$toMaybe(
+		A2($elm$json$Json$Decode$decodeValue, decoder, envelope.payload));
+};
 var $author$project$Main$decodeEvent = function (env) {
+	var makeMsg = function (_v0) {
+		var parser = _v0.a;
+		var constructor = _v0.b;
+		return A2(
+			$elm$core$Basics$composeR,
+			parser,
+			$elm$core$Maybe$map(constructor));
+	};
 	var parserConstrucors = _List_fromArray(
 		[
-			_Utils_Tuple2($author$project$ViewMeal$parseMealEvent, $author$project$Main$MealTypeEvent)
+			makeMsg(
+			_Utils_Tuple2($author$project$ViewMeal$parseMealEvent, $author$project$Main$MealTypeEvent)),
+			makeMsg(
+			_Utils_Tuple2($author$project$ViewSymptom$parseSymptomEvent, $author$project$Main$SymptomTypeEvent))
 		]);
 	return A2(
 		$elm$core$List$filterMap,
 		function (f) {
 			return f(env);
 		},
-		A2(
-			$elm$core$List$map,
-			function (_v0) {
-				var parser = _v0.a;
-				var constructor = _v0.b;
-				return A2(
-					$elm$core$Basics$composeR,
-					parser,
-					$elm$core$Maybe$map(constructor));
-			},
-			parserConstrucors));
+		parserConstrucors);
 };
 var $elm$core$List$append = F2(
 	function (xs, ys) {
@@ -5809,6 +5881,7 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 	function (_v0, model) {
 		var ev = _v0.a;
 		var streamId = _v0.b;
+		var streamPosition = _v0.c;
 		var meals = model.meals;
 		var mealWithId = $elm$core$List$head(
 			A2(
@@ -5817,7 +5890,24 @@ var $author$project$ViewMeal$applyMealEventList = F2(
 					return _Utils_eq(m.streamId, streamId);
 				},
 				meals));
-		var updatedMeal = A3($author$project$ViewMeal$applyEvent, ev, mealWithId, streamId);
+		var updatedMeal = _Utils_eq(
+			streamPosition,
+			A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				A2(
+					$elm$core$Maybe$map,
+					function ($) {
+						return $.streamPosition;
+					},
+					mealWithId)) + 1) ? A2(
+			$elm$core$Maybe$map,
+			function (m) {
+				return _Utils_update(
+					m,
+					{streamPosition: streamPosition});
+			},
+			A3($author$project$ViewMeal$applyEvent, ev, mealWithId, streamId)) : mealWithId;
 		var newMeals = function () {
 			var _v1 = _Utils_Tuple2(mealWithId, updatedMeal);
 			if (_v1.a.$ === 'Just') {
@@ -5903,32 +5993,234 @@ var $author$project$ViewMeal$applyPersistanceResult = F2(
 			return newModel;
 		}
 	});
-var $author$project$Main$applyPersistanceResult = F2(
-	function (typeEvent, model) {
-		if (typeEvent.$ === 'MealTypeEvent') {
-			var mealEvent = typeEvent.a;
-			return function (meals) {
-				return _Utils_update(
-					model,
-					{meals: meals});
-			}(
-				A2($author$project$ViewMeal$applyPersistanceResult, mealEvent, model.meals));
+var $author$project$EditSymptom$AssignedSymptomId = function (a) {
+	return {$: 'AssignedSymptomId', a: a};
+};
+var $author$project$ViewSymptom$Open = function (a) {
+	return {$: 'Open', a: a};
+};
+var $author$project$EditSymptom$Existing = function (a) {
+	return {$: 'Existing', a: a};
+};
+var $author$project$EditSymptom$Symptom = F6(
+	function (streamId, streamPosition, category, datetime, severity, notes) {
+		return {category: category, datetime: datetime, notes: notes, severity: severity, streamId: streamId, streamPosition: streamPosition};
+	});
+var $author$project$DynamicSelect$init = function (items) {
+	return {isOpen: false, items: items, searchTerm: '', selectedItem: $elm$core$Maybe$Nothing};
+};
+var $author$project$EditSymptom$applyPersistanceResult = F2(
+	function (event, model) {
+		var _v0 = _Utils_Tuple2(event, model);
+		if ((_v0.a.$ === 'AssignedSymptomId') && (_v0.b.$ === 'Creating')) {
+			var streamId = _v0.a.a;
+			var categoriesList = _v0.b.a;
+			return $author$project$EditSymptom$Existing(
+				A6(
+					$author$project$EditSymptom$Symptom,
+					streamId,
+					1,
+					$author$project$DynamicSelect$init(categoriesList),
+					'',
+					$elm$core$Maybe$Nothing,
+					''));
 		} else {
 			return model;
 		}
 	});
+var $author$project$ViewSymptom$emptySymptom = {category: '', datetime: '', notes: '', severity: $elm$core$Maybe$Nothing, streamId: '', streamPosition: 1};
+var $author$project$ViewSymptom$applyEvent = F3(
+	function (ev, maybeSymptom, streamId) {
+		var _v0 = _Utils_Tuple2(ev, maybeSymptom);
+		if (_v0.b.$ === 'Just') {
+			switch (_v0.a.$) {
+				case 'SymptomCreated':
+					var _v3 = _v0.a;
+					return maybeSymptom;
+				case 'CategoryUpdated':
+					var category = _v0.a.a;
+					var symptom = _v0.b.a;
+					return $elm$core$Maybe$Just(
+						_Utils_update(
+							symptom,
+							{category: category}));
+				case 'DateTimeUpdated':
+					var datetime = _v0.a.a;
+					var symptom = _v0.b.a;
+					return $elm$core$Maybe$Just(
+						_Utils_update(
+							symptom,
+							{datetime: datetime}));
+				case 'SymptomDeleted':
+					var _v4 = _v0.a;
+					return $elm$core$Maybe$Nothing;
+				case 'SeverityUpdated':
+					var severity = _v0.a.a;
+					var symptom = _v0.b.a;
+					return $elm$core$Maybe$Just(
+						_Utils_update(
+							symptom,
+							{
+								severity: $elm$core$Maybe$Just(severity)
+							}));
+				default:
+					var notes = _v0.a.a;
+					var symptom = _v0.b.a;
+					return $elm$core$Maybe$Just(
+						_Utils_update(
+							symptom,
+							{notes: notes}));
+			}
+		} else {
+			if (_v0.a.$ === 'SymptomCreated') {
+				var _v1 = _v0.a;
+				var _v2 = _v0.b;
+				return $elm$core$Maybe$Just(
+					_Utils_update(
+						$author$project$ViewSymptom$emptySymptom,
+						{streamId: streamId}));
+			} else {
+				var _v5 = _v0.b;
+				return $elm$core$Maybe$Nothing;
+			}
+		}
+	});
+var $author$project$ViewSymptom$applySymptomEventList = F2(
+	function (_v0, model) {
+		var ev = _v0.a;
+		var streamId = _v0.b;
+		var streamPosition = _v0.c;
+		var symptoms = model.symptoms;
+		var symptomWithId = $elm$core$List$head(
+			A2(
+				$elm$core$List$filter,
+				function (s) {
+					return _Utils_eq(s.streamId, streamId);
+				},
+				symptoms));
+		var updatedSymptom = _Utils_eq(
+			streamPosition,
+			A2(
+				$elm$core$Maybe$withDefault,
+				0,
+				A2(
+					$elm$core$Maybe$map,
+					function ($) {
+						return $.streamPosition;
+					},
+					symptomWithId)) + 1) ? A2(
+			$elm$core$Maybe$map,
+			function (s) {
+				return _Utils_update(
+					s,
+					{streamPosition: streamPosition});
+			},
+			A3($author$project$ViewSymptom$applyEvent, ev, symptomWithId, streamId)) : symptomWithId;
+		var newSymptoms = function () {
+			var _v1 = _Utils_Tuple2(symptomWithId, updatedSymptom);
+			if (_v1.a.$ === 'Just') {
+				if (_v1.b.$ === 'Just') {
+					var updated = _v1.b.a;
+					return A2(
+						$elm$core$List$cons,
+						updated,
+						A2(
+							$elm$core$List$filter,
+							function (s) {
+								return !_Utils_eq(s.streamId, streamId);
+							},
+							symptoms));
+				} else {
+					var _v3 = _v1.b;
+					return A2(
+						$elm$core$List$filter,
+						function (s) {
+							return !_Utils_eq(s.streamId, streamId);
+						},
+						symptoms);
+				}
+			} else {
+				if (_v1.b.$ === 'Just') {
+					var _v2 = _v1.a;
+					var newSymptom = _v1.b.a;
+					return A2($elm$core$List$cons, newSymptom, symptoms);
+				} else {
+					var _v4 = _v1.a;
+					var _v5 = _v1.b;
+					return symptoms;
+				}
+			}
+		}();
+		return _Utils_update(
+			model,
+			{symptoms: newSymptoms});
+	});
+var $author$project$ViewSymptom$applyPersistanceResult = F2(
+	function (events, model) {
+		var newModel = A2($author$project$ViewSymptom$applySymptomEventList, events, model);
+		var _v0 = _Utils_Tuple2(events, model.dialog);
+		if ((_v0.a.a.$ === 'SymptomCreated') && (_v0.b.$ === 'Open')) {
+			var _v1 = _v0.a;
+			var _v2 = _v1.a;
+			var streamId = _v1.b;
+			var dialog = _v0.b.a;
+			return _Utils_update(
+				newModel,
+				{
+					dialog: $author$project$ViewSymptom$Open(
+						A2(
+							$author$project$EditSymptom$applyPersistanceResult,
+							$author$project$EditSymptom$AssignedSymptomId(streamId),
+							dialog))
+				});
+		} else {
+			return newModel;
+		}
+	});
+var $author$project$Main$applyPersistanceResult = F2(
+	function (typeEvent, model) {
+		switch (typeEvent.$) {
+			case 'MealTypeEvent':
+				var mealEvent = typeEvent.a;
+				return function (meals) {
+					return _Utils_update(
+						model,
+						{meals: meals});
+				}(
+					A2($author$project$ViewMeal$applyPersistanceResult, mealEvent, model.meals));
+			case 'SymptomTypeEvent':
+				var symptomEvent = typeEvent.a;
+				return function (symptoms) {
+					return _Utils_update(
+						model,
+						{symptoms: symptoms});
+				}(
+					A2($author$project$ViewSymptom$applyPersistanceResult, symptomEvent, model.symptoms));
+			default:
+				return model;
+		}
+	});
 var $author$project$Main$applyTypeEvent = F2(
 	function (typeEvent, model) {
-		if (typeEvent.$ === 'MealTypeEvent') {
-			var mealEvent = typeEvent.a;
-			return function (meals) {
-				return _Utils_update(
-					model,
-					{meals: meals});
-			}(
-				A2($author$project$ViewMeal$applyMealEventList, mealEvent, model.meals));
-		} else {
-			return model;
+		switch (typeEvent.$) {
+			case 'MealTypeEvent':
+				var mealEvent = typeEvent.a;
+				return function (meals) {
+					return _Utils_update(
+						model,
+						{meals: meals});
+				}(
+					A2($author$project$ViewMeal$applyMealEventList, mealEvent, model.meals));
+			case 'SymptomTypeEvent':
+				var symptomEvent = typeEvent.a;
+				return function (symptoms) {
+					return _Utils_update(
+						model,
+						{symptoms: symptoms});
+				}(
+					A2($author$project$ViewSymptom$applySymptomEventList, symptomEvent, model.symptoms));
+			default:
+				return model;
 		}
 	});
 var $author$project$Main$NoOp = {$: 'NoOp'};
@@ -6717,6 +7009,449 @@ var $author$project$ViewMeal$update = F2(
 				}
 		}
 	});
+var $author$project$ViewSymptom$EditSymptomMsg = function (a) {
+	return {$: 'EditSymptomMsg', a: a};
+};
+var $elm$core$Set$Set_elm_builtin = function (a) {
+	return {$: 'Set_elm_builtin', a: a};
+};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Set$empty = $elm$core$Set$Set_elm_builtin($elm$core$Dict$empty);
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Set$insert = F2(
+	function (key, _v0) {
+		var dict = _v0.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
+	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $author$project$EditSymptom$Creating = function (a) {
+	return {$: 'Creating', a: a};
+};
+var $author$project$EditSymptom$causationId = 'symptom-modal-1';
+var $author$project$EditSymptom$correlationId = $author$project$EditSymptom$causationId;
+var $author$project$EditSymptom$init = function (categoriesList) {
+	var eventData = {
+		causationId: $author$project$EditSymptom$causationId,
+		correlationId: $author$project$EditSymptom$correlationId,
+		payload: $elm$json$Json$Encode$object(_List_Nil),
+		schemaVersion: 1,
+		streamType: 'symptom',
+		type_: 'CreateSymptom'
+	};
+	return _Utils_Tuple3(
+		$author$project$EditSymptom$Creating(categoriesList),
+		$elm$core$Platform$Cmd$none,
+		$author$project$Event$persistNew(eventData));
+};
+var $author$project$DynamicSelect$setSelectedItem = F2(
+	function (item, model) {
+		return _Utils_update(
+			model,
+			{searchTerm: '', selectedItem: item});
+	});
+var $author$project$EditSymptom$initWithSymptom = F2(
+	function (symptom, categoriesList) {
+		return _Utils_Tuple2(
+			$author$project$EditSymptom$Existing(
+				A6(
+					$author$project$EditSymptom$Symptom,
+					symptom.streamId,
+					symptom.streamPosition,
+					A2(
+						$author$project$DynamicSelect$setSelectedItem,
+						$elm$core$Maybe$Just(symptom.category),
+						$author$project$DynamicSelect$init(categoriesList)),
+					symptom.datetime,
+					symptom.severity,
+					symptom.notes)),
+			$elm$core$Platform$Cmd$none);
+	});
+var $author$project$EditSymptom$InteractionSymptomEvent = F2(
+	function (a, b) {
+		return {$: 'InteractionSymptomEvent', a: a, b: b};
+	});
+var $author$project$EditSymptom$applyPersistingEvent = F2(
+	function (ev, model) {
+		switch (ev.$) {
+			case 'DateTimeUpdated':
+				var datetime = ev.a;
+				return _Utils_update(
+					model,
+					{datetime: datetime});
+			case 'DeleteSymptom':
+				return model;
+			case 'NotesUpdated':
+				var notes = ev.a;
+				return _Utils_update(
+					model,
+					{notes: notes});
+			case 'SeverityUpdated':
+				var severity = ev.a;
+				return _Utils_update(
+					model,
+					{severity: severity});
+			default:
+				var category = ev.a;
+				return _Utils_update(
+					model,
+					{
+						category: A2(
+							$author$project$DynamicSelect$setSelectedItem,
+							$elm$core$Maybe$Just(category),
+							model.category)
+					});
+		}
+	});
+var $author$project$EditSymptom$encodeSymptomEvent = function (ev) {
+	switch (ev.$) {
+		case 'CategoryChanged':
+			var category = ev.a;
+			return _Utils_Tuple2(
+				'CategoryChanged',
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'category',
+							$elm$json$Json$Encode$string(category))
+						])));
+		case 'NotesUpdated':
+			var notes = ev.a;
+			return _Utils_Tuple2(
+				'NotesUpdated',
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'notes',
+							$elm$json$Json$Encode$string(notes))
+						])));
+		case 'SeverityUpdated':
+			var severity = ev.a;
+			return _Utils_Tuple2(
+				'SeverityUpdated',
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'severity',
+							A2(
+								$elm$core$Maybe$withDefault,
+								$elm$json$Json$Encode$null,
+								A2($elm$core$Maybe$map, $elm$json$Json$Encode$int, severity)))
+						])));
+		case 'DateTimeUpdated':
+			var datetime = ev.a;
+			return _Utils_Tuple2(
+				'DateTimeUpdated',
+				$elm$json$Json$Encode$object(
+					_List_fromArray(
+						[
+							_Utils_Tuple2(
+							'datetime',
+							$elm$json$Json$Encode$string(datetime))
+						])));
+		default:
+			return _Utils_Tuple2('SymptomDeleted', $elm$json$Json$Encode$null);
+	}
+};
+var $author$project$EditSymptom$persistSymptomEvent = F2(
+	function (symptomEvent, symptom) {
+		if (symptomEvent.$ === 'InteractionSymptomEvent') {
+			var ev = symptomEvent.a;
+			var streamId = symptomEvent.b;
+			var _v1 = $author$project$EditSymptom$encodeSymptomEvent(ev);
+			var eventType = _v1.a;
+			var payload = _v1.b;
+			var eventData = {causationId: $author$project$EditSymptom$causationId, correlationId: $author$project$EditSymptom$correlationId, expectedStreamPosition: symptom.streamPosition + 1, payload: payload, schemaVersion: 1, streamId: streamId, type_: eventType};
+			return _Utils_Tuple3(
+				A2($author$project$EditSymptom$applyPersistingEvent, ev, symptom),
+				$elm$core$Platform$Cmd$none,
+				$author$project$Event$persist(eventData));
+		} else {
+			var newStreamId = symptomEvent.a;
+			return _Utils_Tuple3(
+				_Utils_update(
+					symptom,
+					{streamId: newStreamId}),
+				$elm$core$Platform$Cmd$none,
+				$elm$core$Platform$Cmd$none);
+		}
+	});
+var $author$project$DynamicSelect$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'ToggleDropdown':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{isOpen: !model.isOpen}),
+					$elm$core$Platform$Cmd$none);
+			case 'SearchChanged':
+				var term = msg.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{isOpen: true, searchTerm: term}),
+					$elm$core$Platform$Cmd$none);
+			case 'CloseDropdown':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{isOpen: false}),
+					$elm$core$Platform$Cmd$none);
+			default:
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+		}
+	});
+var $author$project$EditSymptom$update = F2(
+	function (msg, model) {
+		var _v0 = _Utils_Tuple2(msg, model);
+		if (_v0.b.$ === 'Existing') {
+			switch (_v0.a.$) {
+				case 'MakeEvent':
+					var event = _v0.a.a;
+					var symptom = _v0.b.a;
+					var _v1 = A2(
+						$author$project$EditSymptom$persistSymptomEvent,
+						A2($author$project$EditSymptom$InteractionSymptomEvent, event, symptom.streamId),
+						symptom);
+					var newSymptom = _v1.a;
+					var cmd = _v1.b;
+					var evCmd = _v1.c;
+					return _Utils_Tuple3(
+						$author$project$EditSymptom$Existing(
+							_Utils_update(
+								newSymptom,
+								{streamPosition: symptom.streamPosition + 1})),
+						cmd,
+						evCmd);
+				case 'DateTimeChanged':
+					var datetime = _v0.a.a;
+					var symptom = _v0.b.a;
+					return _Utils_Tuple3(
+						$author$project$EditSymptom$Existing(
+							_Utils_update(
+								symptom,
+								{datetime: datetime})),
+						$elm$core$Platform$Cmd$none,
+						$elm$core$Platform$Cmd$none);
+				case 'NotesChanged':
+					var notes = _v0.a.a;
+					var symptom = _v0.b.a;
+					return _Utils_Tuple3(
+						$author$project$EditSymptom$Existing(
+							_Utils_update(
+								symptom,
+								{notes: notes})),
+						$elm$core$Platform$Cmd$none,
+						$elm$core$Platform$Cmd$none);
+				default:
+					var subMsg = _v0.a.a;
+					var symptom = _v0.b.a;
+					var _v2 = A2($author$project$DynamicSelect$update, subMsg, symptom.category);
+					var updatedDropdown = _v2.a;
+					var cmd = _v2.b;
+					return _Utils_Tuple3(
+						$author$project$EditSymptom$Existing(
+							_Utils_update(
+								symptom,
+								{category: updatedDropdown})),
+						cmd,
+						$elm$core$Platform$Cmd$none);
+			}
+		} else {
+			return _Utils_Tuple3(model, $elm$core$Platform$Cmd$none, $elm$core$Platform$Cmd$none);
+		}
+	});
+var $author$project$ViewSymptom$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'NoOp':
+				return _Utils_Tuple3(model, $elm$core$Platform$Cmd$none, $elm$core$Platform$Cmd$none);
+			case 'OpenDialog':
+				var symptom = msg.a;
+				var categories = $elm$core$Set$toList(
+					$elm$core$Set$fromList(
+						A2(
+							$elm$core$List$map,
+							function (s) {
+								return s.category;
+							},
+							model.symptoms)));
+				var _v1 = A2($author$project$EditSymptom$initWithSymptom, symptom, categories);
+				var editModel = _v1.a;
+				var cmd = _v1.b;
+				return _Utils_Tuple3(
+					_Utils_update(
+						model,
+						{
+							dialog: $author$project$ViewSymptom$Open(editModel)
+						}),
+					A2($elm$core$Platform$Cmd$map, $author$project$ViewSymptom$EditSymptomMsg, cmd),
+					$elm$core$Platform$Cmd$none);
+			case 'OpenNewSymptomDialog':
+				var categories = $elm$core$Set$toList(
+					$elm$core$Set$fromList(
+						A2(
+							$elm$core$List$map,
+							function (s) {
+								return s.category;
+							},
+							model.symptoms)));
+				var _v2 = $author$project$EditSymptom$init(categories);
+				var editModel = _v2.a;
+				var cmd = _v2.b;
+				var evCmd = _v2.c;
+				return _Utils_Tuple3(
+					_Utils_update(
+						model,
+						{
+							dialog: $author$project$ViewSymptom$Open(editModel)
+						}),
+					A2($elm$core$Platform$Cmd$map, $author$project$ViewSymptom$EditSymptomMsg, cmd),
+					evCmd);
+			case 'CloseDialog':
+				return _Utils_Tuple3(
+					_Utils_update(
+						model,
+						{dialog: $author$project$ViewSymptom$Closed}),
+					$elm$core$Platform$Cmd$none,
+					$elm$core$Platform$Cmd$none);
+			default:
+				var esmsg = msg.a;
+				var _v3 = model.dialog;
+				if (_v3.$ === 'Closed') {
+					return _Utils_Tuple3(model, $elm$core$Platform$Cmd$none, $elm$core$Platform$Cmd$none);
+				} else {
+					var emodel = _v3.a;
+					var _v4 = A2($author$project$EditSymptom$update, esmsg, emodel);
+					var updatedEmodel = _v4.a;
+					var cmd = _v4.b;
+					var evCmd = _v4.c;
+					return _Utils_Tuple3(
+						_Utils_update(
+							model,
+							{
+								dialog: $author$project$ViewSymptom$Open(updatedEmodel)
+							}),
+						A2($elm$core$Platform$Cmd$map, $author$project$ViewSymptom$EditSymptomMsg, cmd),
+						evCmd);
+				}
+		}
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6750,6 +7485,22 @@ var $author$project$Main$update = F2(
 								A2($elm$core$Platform$Cmd$map, $author$project$Main$EventMsg, evCmd),
 								A2($elm$core$Platform$Cmd$map, $author$project$Main$MealMsg, cmd)
 							])));
+			case 'SymptomMsg':
+				var subMsg = msg.a;
+				var _v3 = A2($author$project$ViewSymptom$update, subMsg, model.symptoms);
+				var updatedSymptomModel = _v3.a;
+				var cmd = _v3.b;
+				var evCmd = _v3.c;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{symptoms: updatedSymptomModel}),
+					$elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								A2($elm$core$Platform$Cmd$map, $author$project$Main$EventMsg, evCmd),
+								A2($elm$core$Platform$Cmd$map, $author$project$Main$SymptomMsg, cmd)
+							])));
 			case 'QueryAll':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			case 'PersistanceResult':
@@ -6764,6 +7515,7 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 		}
 	});
+var $elm$html$Html$article = _VirtualDom_node('article');
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -6807,7 +7559,6 @@ var $elm$html$Html$Events$onClick = function (msg) {
 		$elm$json$Json$Decode$succeed(msg));
 };
 var $elm$html$Html$ul = _VirtualDom_node('ul');
-var $elm$html$Html$article = _VirtualDom_node('article');
 var $elm$virtual_dom$VirtualDom$attribute = F2(
 	function (key, value) {
 		return A2(
@@ -7230,6 +7981,416 @@ var $author$project$ViewMeal$view = function (model) {
 			}()
 			]));
 };
+var $author$project$ViewSymptom$CloseDialog = {$: 'CloseDialog'};
+var $author$project$ViewSymptom$OpenNewSymptomDialog = {$: 'OpenNewSymptomDialog'};
+var $author$project$EditSymptom$dialog = F2(
+	function (attrs, nodes) {
+		return A3($elm$html$Html$node, 'dialog', attrs, nodes);
+	});
+var $author$project$EditSymptom$CategoryChanged = function (a) {
+	return {$: 'CategoryChanged', a: a};
+};
+var $author$project$EditSymptom$DateTimeChanged = function (a) {
+	return {$: 'DateTimeChanged', a: a};
+};
+var $author$project$EditSymptom$DateTimeUpdated = function (a) {
+	return {$: 'DateTimeUpdated', a: a};
+};
+var $author$project$EditSymptom$DropdownMsg = function (a) {
+	return {$: 'DropdownMsg', a: a};
+};
+var $author$project$EditSymptom$MakeEvent = function (a) {
+	return {$: 'MakeEvent', a: a};
+};
+var $author$project$EditSymptom$NotesChanged = function (a) {
+	return {$: 'NotesChanged', a: a};
+};
+var $author$project$EditSymptom$NotesUpdated = function (a) {
+	return {$: 'NotesUpdated', a: a};
+};
+var $author$project$DynamicSelect$CloseDropdown = {$: 'CloseDropdown'};
+var $author$project$DynamicSelect$NoOp = {$: 'NoOp'};
+var $author$project$DynamicSelect$SearchChanged = function (a) {
+	return {$: 'SearchChanged', a: a};
+};
+var $author$project$DynamicSelect$ToggleDropdown = {$: 'ToggleDropdown'};
+var $author$project$DynamicSelect$details = F2(
+	function (attrs, nodes) {
+		return A3($elm$html$Html$node, 'details', attrs, nodes);
+	});
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $author$project$DynamicSelect$makeItem = F3(
+	function (onChange, item, isSelected) {
+		return A2(
+			$elm$html$Html$li,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('dropdown-item'),
+					$elm$html$Html$Events$onClick(
+					onChange(item)),
+					A2(
+					$elm$html$Html$Attributes$style,
+					'font-weight',
+					isSelected ? 'bold' : 'normal')
+				]),
+			_List_fromArray(
+				[
+					$elm$html$Html$text(item)
+				]));
+	});
+var $author$project$DynamicSelect$view = F3(
+	function (model, mapParent, onChange) {
+		var makeCheckedItem = function (item) {
+			return A2($author$project$DynamicSelect$makeItem, onChange, item);
+		};
+		var keyDecoder = A2(
+			$elm$json$Json$Decode$map,
+			function (kc) {
+				switch (kc) {
+					case 13:
+						return _Utils_Tuple2(
+							onChange(model.searchTerm),
+							true);
+					case 27:
+						return _Utils_Tuple2(
+							mapParent($author$project$DynamicSelect$CloseDropdown),
+							true);
+					default:
+						return _Utils_Tuple2(
+							mapParent($author$project$DynamicSelect$NoOp),
+							false);
+				}
+			},
+			$elm$html$Html$Events$keyCode);
+		var search = A2(
+			$elm$html$Html$li,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$type_('search'),
+							$elm$html$Html$Attributes$placeholder('Select Symptom...'),
+							$elm$html$Html$Attributes$value(model.searchTerm),
+							$elm$html$Html$Events$onInput(
+							A2($elm$core$Basics$composeL, mapParent, $author$project$DynamicSelect$SearchChanged)),
+							A2($elm$html$Html$Events$preventDefaultOn, 'keydown', keyDecoder)
+						]),
+					_List_Nil)
+				]));
+		var isContained = function (item) {
+			return A2(
+				$elm$core$String$contains,
+				$elm$core$String$toLower(model.searchTerm),
+				$elm$core$String$toLower(item));
+		};
+		var detailsOpen = model.isOpen ? _List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$attribute, 'open', ''),
+				$elm$html$Html$Attributes$class('dropdown')
+			]) : _List_fromArray(
+			[
+				$elm$html$Html$Attributes$class('dropdown')
+			]);
+		var combinedItems = function () {
+			var _v1 = model.selectedItem;
+			if (_v1.$ === 'Just') {
+				var sel = _v1.a;
+				return A2(
+					$elm$core$List$cons,
+					sel,
+					A2(
+						$elm$core$List$filter,
+						function (item) {
+							return !_Utils_eq(item, sel);
+						},
+						model.items));
+			} else {
+				return model.items;
+			}
+		}();
+		var allItems = (model.searchTerm === '') ? combinedItems : (A2($elm$core$List$member, model.searchTerm, model.items) ? combinedItems : A2($elm$core$List$cons, model.searchTerm, combinedItems));
+		return A2(
+			$author$project$DynamicSelect$details,
+			detailsOpen,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$summary,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick(
+							mapParent($author$project$DynamicSelect$ToggleDropdown))
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text(
+							function () {
+								var _v0 = model.selectedItem;
+								if (_v0.$ === 'Nothing') {
+									return 'Select item';
+								} else {
+									var item = _v0.a;
+									return item;
+								}
+							}())
+						])),
+					A2(
+					$elm$html$Html$ul,
+					_List_Nil,
+					A2(
+						$elm$core$List$cons,
+						search,
+						A2(
+							$elm$core$List$map,
+							function (i) {
+								return A2(
+									makeCheckedItem,
+									i,
+									_Utils_eq(
+										model.selectedItem,
+										$elm$core$Maybe$Just(i)));
+							},
+							A2($elm$core$List$filter, isContained, allItems))))
+				]));
+	});
+var $author$project$EditSymptom$SeverityUpdated = function (a) {
+	return {$: 'SeverityUpdated', a: a};
+};
+var $elm$html$Html$fieldset = _VirtualDom_node('fieldset');
+var $elm$core$Debug$log = _Debug_log;
+var $elm$html$Html$Attributes$max = $elm$html$Html$Attributes$stringProperty('max');
+var $elm$html$Html$Attributes$min = $elm$html$Html$Attributes$stringProperty('min');
+var $author$project$EditSymptom$viewSeverity = function (severity) {
+	var attrs = _List_fromArray(
+		[
+			$elm$html$Html$Attributes$type_('range'),
+			$elm$html$Html$Attributes$min('1'),
+			$elm$html$Html$Attributes$max('10'),
+			A2(
+			$elm$html$Html$Events$on,
+			'blur',
+			A2(
+				$elm$json$Json$Decode$map,
+				A2(
+					$elm$core$Basics$composeL,
+					A2(
+						$elm$core$Basics$composeL,
+						A2($elm$core$Basics$composeL, $author$project$EditSymptom$MakeEvent, $author$project$EditSymptom$SeverityUpdated),
+						$elm$core$String$toInt),
+					$elm$core$Debug$log('got int')),
+				A2(
+					$elm$json$Json$Decode$at,
+					_List_fromArray(
+						['target', 'value']),
+					$elm$json$Json$Decode$string)))
+		]);
+	var slider = function () {
+		if (severity.$ === 'Just') {
+			var s = severity.a;
+			return A2(
+				$elm$html$Html$input,
+				A2(
+					$elm$core$List$cons,
+					$elm$html$Html$Attributes$value(
+						$elm$core$String$fromInt(s)),
+					attrs),
+				_List_Nil);
+		} else {
+			return A2($elm$html$Html$input, attrs, _List_Nil);
+		}
+	}();
+	return A2(
+		$elm$html$Html$fieldset,
+		_List_fromArray(
+			[
+				A2($elm$html$Html$Attributes$attribute, 'role', 'group')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$label,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Severity (1-10)')
+					])),
+				slider,
+				function () {
+				if (severity.$ === 'Just') {
+					var s = severity.a;
+					return $elm$html$Html$text(
+						' ' + $elm$core$String$fromInt(s));
+				} else {
+					return $elm$html$Html$text(' Not set');
+				}
+			}()
+			]));
+};
+var $author$project$EditSymptom$viewForm = function (modal) {
+	return A2(
+		$elm$html$Html$p,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A3(
+				$author$project$DynamicSelect$view,
+				modal.category,
+				$author$project$EditSymptom$DropdownMsg,
+				A2($elm$core$Basics$composeL, $author$project$EditSymptom$MakeEvent, $author$project$EditSymptom$CategoryChanged)),
+				A2(
+				$elm$html$Html$input,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$type_('datetime-local'),
+						$elm$html$Html$Attributes$placeholder('Date'),
+						$elm$html$Html$Attributes$value(modal.datetime),
+						$elm$html$Html$Events$onInput($author$project$EditSymptom$DateTimeChanged),
+						$elm$html$Html$Events$onBlur(
+						$author$project$EditSymptom$MakeEvent(
+							$author$project$EditSymptom$DateTimeUpdated(modal.datetime)))
+					]),
+				_List_Nil),
+				$author$project$EditSymptom$viewSeverity(modal.severity),
+				A2(
+				$elm$html$Html$textarea,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$placeholder('Notes'),
+						$elm$html$Html$Attributes$value(modal.notes),
+						$elm$html$Html$Events$onInput($author$project$EditSymptom$NotesChanged),
+						$elm$html$Html$Events$onBlur(
+						$author$project$EditSymptom$MakeEvent(
+							$author$project$EditSymptom$NotesUpdated(modal.notes)))
+					]),
+				_List_Nil)
+			]));
+};
+var $author$project$EditSymptom$view = F3(
+	function (modal, mapMsg, onClose) {
+		var content = function () {
+			if (modal.$ === 'Creating') {
+				return $elm$html$Html$text('Creating new symptom...');
+			} else {
+				var symptom = modal.a;
+				return $author$project$EditSymptom$viewForm(symptom);
+			}
+		}();
+		return A2(
+			$author$project$EditSymptom$dialog,
+			_List_fromArray(
+				[
+					A2($elm$html$Html$Attributes$attribute, 'open', '')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$article,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$elm$html$Html$header,
+							_List_Nil,
+							_List_fromArray(
+								[
+									A2(
+									$elm$html$Html$button,
+									_List_fromArray(
+										[
+											A2($elm$html$Html$Attributes$attribute, 'aria-label', 'Close'),
+											$elm$html$Html$Attributes$rel('prev'),
+											$elm$html$Html$Events$onClick(onClose)
+										]),
+									_List_Nil),
+									A2(
+									$elm$html$Html$p,
+									_List_Nil,
+									_List_fromArray(
+										[
+											A2(
+											$elm$html$Html$strong,
+											_List_Nil,
+											_List_fromArray(
+												[
+													$elm$html$Html$text('Edit Symptom')
+												]))
+										]))
+								])),
+							A2($elm$html$Html$map, mapMsg, content)
+						]))
+				]));
+	});
+var $author$project$ViewSymptom$OpenDialog = function (a) {
+	return {$: 'OpenDialog', a: a};
+};
+var $author$project$ViewSymptom$viewSymptom = function (symptom) {
+	return A2(
+		$elm$html$Html$li,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Symptom at ' + symptom.datetime),
+						A2(
+						$elm$html$Html$button,
+						_List_fromArray(
+							[
+								$elm$html$Html$Events$onClick(
+								$author$project$ViewSymptom$OpenDialog(symptom))
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Edit')
+							]))
+					]))
+			]));
+};
+var $author$project$ViewSymptom$view = function (model) {
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$h1,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Symptoms')
+					])),
+				A2(
+				$elm$html$Html$button,
+				_List_fromArray(
+					[
+						$elm$html$Html$Events$onClick($author$project$ViewSymptom$OpenNewSymptomDialog)
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Add Symptom')
+					])),
+				A2(
+				$elm$html$Html$ul,
+				_List_Nil,
+				A2($elm$core$List$map, $author$project$ViewSymptom$viewSymptom, model.symptoms)),
+				function () {
+				var _v0 = model.dialog;
+				if (_v0.$ === 'Closed') {
+					return $elm$html$Html$text('');
+				} else {
+					var emodel = _v0.a;
+					return A3($author$project$EditSymptom$view, emodel, $author$project$ViewSymptom$EditSymptomMsg, $author$project$ViewSymptom$CloseDialog);
+				}
+			}()
+			]));
+};
 var $author$project$Main$view = function (model) {
 	return A2(
 		$elm$html$Html$main_,
@@ -7241,9 +8402,25 @@ var $author$project$Main$view = function (model) {
 			[
 				$author$project$Main$title,
 				A2(
-				$elm$html$Html$map,
-				$author$project$Main$MealMsg,
-				$author$project$ViewMeal$view(model.meals))
+				$elm$html$Html$article,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$map,
+						$author$project$Main$MealMsg,
+						$author$project$ViewMeal$view(model.meals))
+					])),
+				A2(
+				$elm$html$Html$article,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$map,
+						$author$project$Main$SymptomMsg,
+						$author$project$ViewSymptom$view(model.symptoms))
+					]))
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(

@@ -7,6 +7,7 @@ import Html.Attributes exposing (class)
 import Json.Decode as D
 import Random
 import ViewMeal as Meal
+import ViewSymptom as Symptom
 
 
 
@@ -18,6 +19,7 @@ type Msg
     | EventMsg Ev.Msg
     | SaveMeal
     | MealMsg Meal.Msg
+    | SymptomMsg Symptom.Msg
     | QueryAll
     | HydrationEvents (List TypeEvent)
     | PersistanceResult (List TypeEvent)
@@ -26,12 +28,14 @@ type Msg
 type alias Model =
     { eventState : Ev.Model
     , meals : Meal.Model
+    , symptoms : Symptom.Model
     }
 
 
 type TypeEvent
     = None
     | MealTypeEvent Meal.HydrationEvent
+    | SymptomTypeEvent Symptom.HydrationEvent
 
 
 
@@ -75,15 +79,20 @@ init flags =
         ( mealModel, mealInitCmd ) =
             Meal.init
 
+        ( symptomModel, symptomCmd ) =
+            Symptom.init
+
         model =
             { eventState = eventState
             , meals = mealModel
+            , symptoms = symptomModel
             }
 
         initCmd =
             Cmd.batch
                 [ Cmd.map MealMsg mealInitCmd
                 , Cmd.map HydrationEvents Ev.hydrateAllStreams
+                , Cmd.map SymptomMsg symptomCmd
                 ]
     in
     ( model, initCmd )
@@ -101,7 +110,7 @@ mapPersistanceResult result =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case  msg of
+    case msg of
         NoOp ->
             ( model, Cmd.none )
 
@@ -129,6 +138,20 @@ update msg model =
                 ]
             )
 
+        SymptomMsg subMsg ->
+            let
+                ( updatedSymptomModel, cmd, evCmd ) =
+                    Symptom.update
+                        subMsg
+                        model.symptoms
+            in
+            ( { model | symptoms = updatedSymptomModel }
+            , Cmd.batch
+                [ Cmd.map EventMsg evCmd
+                , Cmd.map SymptomMsg cmd
+                ]
+            )
+
         QueryAll ->
             ( model, Cmd.none )
 
@@ -143,7 +166,8 @@ view : Model -> Html Msg
 view model =
     main_ [ class "container-fluid" ]
         [ title
-        , Meal.view model.meals |> Html.map MealMsg
+        , Html.article [] [ Meal.view model.meals |> Html.map MealMsg ]
+        , Html.article [] [ Symptom.view model.symptoms |> Html.map SymptomMsg ]
         ]
 
 
@@ -159,12 +183,15 @@ title =
 decodeEvent : Ev.Envelope -> List TypeEvent
 decodeEvent env =
     let
+        makeMsg ( parser, constructor ) =
+            parser >> Maybe.map constructor
+
         parserConstrucors =
-            [ ( Meal.parseMealEvent, MealTypeEvent )
+            [ makeMsg ( Meal.parseMealEvent, MealTypeEvent )
+            , makeMsg ( Symptom.parseSymptomEvent, SymptomTypeEvent )
             ]
     in
     parserConstrucors
-        |> List.map (\( parser, constructor ) -> parser >> Maybe.map constructor)
         |> List.filterMap (\f -> f env)
 
 
@@ -184,6 +211,11 @@ applyTypeEvent typeEvent model =
                 |> Meal.applyMealEventList mealEvent
                 |> (\meals -> { model | meals = meals })
 
+        SymptomTypeEvent symptomEvent ->
+            model.symptoms
+                |> Symptom.applySymptomEventList symptomEvent
+                |> (\symptoms -> { model | symptoms = symptoms })
+
         None ->
             model
 
@@ -193,6 +225,9 @@ applyPersistanceResult typeEvent model =
     case typeEvent of
         MealTypeEvent mealEvent ->
             Meal.applyPersistanceResult mealEvent model.meals |> (\meals -> { model | meals = meals })
+
+        SymptomTypeEvent symptomEvent ->
+            Symptom.applyPersistanceResult symptomEvent model.symptoms |> (\symptoms -> { model | symptoms = symptoms })
 
         None ->
             model

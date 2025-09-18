@@ -56,7 +56,7 @@ type Event
 
 
 type HydrationEvent
-    = HydrationEvent Event String -- StreamId
+    = HydrationEvent Event String Int -- StreamId, StreamPosition
 
 
 init : ( Model, Cmd Msg )
@@ -160,49 +160,45 @@ viewMeal meal =
 parseMealEvent : Ev.Envelope -> Maybe HydrationEvent
 parseMealEvent envelope =
     envelope.payload
-        |> D.decodeValue (decodeMealEvent envelope.type_ envelope.streamId)
+        |> D.decodeValue
+            (D.map3 HydrationEvent
+                (decodeMealEvent envelope.type_)
+                (D.succeed envelope.streamId)
+                (D.succeed envelope.streamPosition)
+            )
         |> Result.toMaybe
 
 
-decodeMealEvent : String -> String -> D.Decoder HydrationEvent
-decodeMealEvent type_ streamId =
-    let
-        mapMealEvent decoder =
-            D.map2 HydrationEvent decoder (D.succeed streamId)
-    in
+decodeMealEvent : String -> D.Decoder Event
+decodeMealEvent type_ =
     case type_ of
         "IngredientAdded" ->
-            mapMealEvent
-                (D.map IngredientAdded (D.field "ingredient" D.string))
+            D.map IngredientAdded (D.field "ingredient" D.string)
 
         "IngredientRemoved" ->
-            mapMealEvent
-                (D.map IngredientRemoved (D.field "ingredient" D.string))
+            D.map IngredientRemoved (D.field "ingredient" D.string)
 
         "MealCreated" ->
-            mapMealEvent <| D.succeed MealCreated
+            D.succeed MealCreated
 
         "NotesUpdated" ->
-            mapMealEvent <|
-                D.map NotesUpdated (D.field "notes" (D.nullable D.string) |> D.map (Maybe.withDefault ""))
+            D.map NotesUpdated (D.field "notes" (D.nullable D.string) |> D.map (Maybe.withDefault ""))
 
         "DateTimeUpdated" ->
-            mapMealEvent <|
-                D.map DateTimeUpdated (D.field "datetime" D.string)
+            D.map DateTimeUpdated (D.field "datetime" D.string)
 
         "MealDeleted" ->
-            mapMealEvent <|
-                D.succeed MealDeleted
+            D.succeed MealDeleted
 
         "CreateMeal" ->
-            mapMealEvent <| D.succeed MealCreated
+            D.succeed MealCreated
 
         _ ->
             D.fail ("Unknown event type: " ++ type_)
 
 
 applyMealEventList : HydrationEvent -> Model -> Model
-applyMealEventList (HydrationEvent ev streamId) model =
+applyMealEventList (HydrationEvent ev streamId streamPosition) model =
     let
         meals =
             model.meals
@@ -211,7 +207,11 @@ applyMealEventList (HydrationEvent ev streamId) model =
             List.filter (\m -> m.streamId == streamId) meals |> List.head
 
         updatedMeal =
-            applyEvent ev mealWithId streamId
+            if streamPosition == (mealWithId |> Maybe.map .streamPosition |> Maybe.withDefault 0) + 1 then
+                applyEvent ev mealWithId streamId |> Maybe.map (\m -> { m | streamPosition = streamPosition })
+
+            else
+                mealWithId
 
         newMeals =
             case ( mealWithId, updatedMeal ) of
@@ -265,7 +265,7 @@ applyPersistanceResult events model =
             applyMealEventList events model
     in
     case ( events, model.dialog ) of
-        ( HydrationEvent MealCreated streamId, Open dialog ) ->
+        ( HydrationEvent MealCreated streamId _, Open dialog ) ->
             -- When a meal is created, we need to set its streamId and streamPosition
             { newModel | dialog = Open <| EM.applyPersistanceResult (EM.AssignedMealId streamId) dialog }
 
