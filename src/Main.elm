@@ -1,14 +1,15 @@
 module Main exposing (main)
 
 import Browser
+import CorrelationChart
 import Event as Ev
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Json.Decode as D
 import Random
+import Symbols
 import ViewMeal as Meal
 import ViewSymptom as Symptom
-import Symbols
 
 
 
@@ -169,6 +170,7 @@ view model =
         [ title
         , Html.article [] [ Meal.view model.meals |> Html.map MealMsg ]
         , Html.article [] [ Symptom.view model.symptoms |> Html.map SymptomMsg ]
+        -- , CorrelationChart.view
         ]
 
 
